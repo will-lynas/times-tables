@@ -13,7 +13,7 @@ for (const width of [1024, 1440]) {
       expect(headingBox.width).toBeLessThanOrEqual(1)
       expect(headingBox.height).toBeLessThanOrEqual(1)
       const header = page.locator('.page-header')
-      await expect(header).toHaveText('PracticeStats')
+      await expect(header).toHaveText('PracticeStatsAbout')
       const nav = page.getByRole('navigation', { name: 'Main' })
       await expect(nav).toBeVisible()
       const headerBox = (await header.boundingBox())!
@@ -28,7 +28,7 @@ for (const width of [1024, 1440]) {
       await expect(page.getByRole('button', { name: `Switch to ${appearance} mode` })).toBeVisible()
       await nav.getByRole('link', { name: 'Stats', exact: true }).click()
       await expect(page.getByRole('region', { name: 'Progress', exact: true })).toBeVisible()
-      await expect(header).toHaveText('PracticeStats')
+      await expect(header).toHaveText('PracticeStatsAbout')
       await nav.getByRole('link', { name: 'Practice', exact: true }).click()
       await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
     })

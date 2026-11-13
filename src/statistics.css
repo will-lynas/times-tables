@@ -1,0 +1,6 @@
+.run-statistics { margin: 24px 0 36px; }
+.run-statistics dl { display: flex; align-items: baseline; gap: 72px; margin: 0; }
+.run-statistics dl > div { display: flex; flex-direction: column-reverse; gap: 5px; min-width: 120px; }
+.run-statistics dt { color: var(--gray-11); font-size: 13px; }
+.run-statistics dd { margin: 0; color: var(--gray-12); font-size: 38px; line-height: 1.15; font-weight: 400; letter-spacing: -1px; font-variant-numeric: tabular-nums; width: fit-content; }
+.run-statistics dd:focus-visible { outline: 2px solid var(--accent-9); outline-offset: 5px; border-radius: 2px; }
