@@ -19,14 +19,15 @@ async function seed(page: Page, records = scores) {
     localStorage.setItem('times-tables.scores', JSON.stringify({ version: 3, scores: records }))
     localStorage.setItem('progress-test-seeded', 'true')
   }, records)
-  await page.goto('/')
+  await page.goto('/progress')
 }
 
 test('plots exact settings, truthful time spacing and perfect-only averages with point tooltips', async ({ page }) => {
   await seed(page)
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
-  await expect(graph.getByText('Ordered · 2 × 2', { exact: true })).toBeVisible()
-  await expect(graph.getByText('Rolling average · 10 perfect complete', { exact: true })).toBeVisible()
+  await expect(graph.getByRole('combobox', { name: 'Progress order' })).toHaveValue('ordered')
+  await expect(graph.getByRole('combobox', { name: 'Progress size' })).toHaveValue('2')
+  await expect(graph.getByText('Average (10 perfect)', { exact: true })).toBeVisible()
   await expect(graph.locator('.progress-perfect .recharts-scatter-symbol')).toHaveCount(3)
   await expect(graph.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(2)
   await expect(graph.locator('.recharts-line-curve')).toHaveCount(1)
@@ -58,7 +59,7 @@ test('plots exact settings, truthful time spacing and perfect-only averages with
   await expect(rows.nth(3)).toContainText('75%')
   await expect(rows.nth(4)).toContainText('50s (2/10)')
   await expect(rows.nth(5)).toContainText('1m (3/10)')
-  await expect(graph).toContainText('Warm-up: 3/10 perfect rounds')
+  await expect(graph.locator('.progress-summary')).toHaveCount(0)
 })
 
 test('persists exact graph controls independently of round and history settings', async ({ page }) => {
@@ -69,11 +70,14 @@ test('persists exact graph controls independently of round and history settings'
   await expect(graph.locator('.recharts-scatter-symbol')).toHaveCount(1)
   await graph.getByRole('combobox', { name: 'Progress size' }).selectOption('3')
   await expect(graph.getByText('No rounds for Shuffled · 3 × 3.', { exact: true })).toBeVisible()
+  await page.getByRole('link', { name: 'Practice', exact: true }).click()
   await page.getByRole('combobox', { name: 'Score order', exact: true }).selectOption('ordered')
   await chooseGridSize(page, 4)
   await page.reload()
+  await page.getByRole('link', { name: 'Progress', exact: true }).click()
   await expect(graph.getByRole('combobox', { name: 'Progress order' })).toHaveValue('shuffled')
   await expect(graph.getByRole('combobox', { name: 'Progress size' })).toHaveValue('3')
+  await page.getByRole('link', { name: 'Practice', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('4 × 4')
   await expect(page.getByRole('combobox', { name: 'Score order', exact: true })).toHaveValue('ordered')
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(raw)
@@ -97,9 +101,12 @@ for (const appearance of ['dark', 'light'] as const) {
     expect(Number(fills[0].opacity)).toBe(1)
     expect(Number(fills[1].opacity)).toBe(0.4)
     expect(fills[0].color).not.toBe(fills[1].color)
+    await expect(graph.locator('.progress-summary, .recharts-label')).toHaveCount(0)
+    await expect(graph.getByText('Ordered · 2 × 2', { exact: true })).toHaveCount(0)
+    await mkdir('artifacts/progress', { recursive: true })
+    await page.screenshot({ path: `artifacts/progress/${appearance}-page-1440.png`, fullPage: true })
     await graph.locator('.progress-perfect .recharts-scatter-symbol').last().hover()
     await expect(graph.locator('.recharts-tooltip-wrapper')).toContainText('Rolling average 1m (3/10)')
-    await mkdir('artifacts/progress', { recursive: true })
     await graph.screenshot({ path: `artifacts/progress/${appearance}-tooltip.png` })
     await graph.getByRole('heading', { name: 'Progress', exact: true }).hover()
     await graph.getByText('Data table', { exact: true }).focus()
@@ -112,6 +119,7 @@ for (const appearance of ['dark', 'light'] as const) {
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(1024)
     await expect.poll(() => graph.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
     await graph.screenshot({ path: `artifacts/progress/${appearance}-1024.png` })
+    await page.screenshot({ path: `artifacts/progress/${appearance}-page-1024.png`, fullPage: true })
     expect(errors).toEqual([])
   })
 }
@@ -121,7 +129,7 @@ test('single zero-duration point is visible; duplicate timestamps and large outl
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
   const symbol = graph.locator('.progress-perfect .recharts-scatter-symbol')
   await expect(symbol).toHaveCount(1)
-  await expect(graph.locator('.progress-summary')).toContainText('1 round · 1 perfect')
+
   await symbol.hover()
   await expect(graph.locator('.recharts-tooltip-wrapper')).toContainText('0s')
   const bounds = await symbol.boundingBox()
@@ -144,7 +152,7 @@ test('single zero-duration point is visible; duplicate timestamps and large outl
 
 test('empty graph stays usable without storage and never shows synthetic data', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Blocked', 'SecurityError') } }))
-  await page.goto('/')
+  await page.goto('/progress')
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
   await expect(graph).toContainText('No rounds for Shuffled · 12 × 12.')
   await graph.getByRole('combobox', { name: 'Progress order' }).selectOption('ordered')

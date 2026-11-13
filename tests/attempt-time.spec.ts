@@ -22,11 +22,11 @@ async function seed(page: Page) {
     localStorage.setItem('attempt-time-seeded', 'true')
   }, records)
   await page.goto('/')
-  // Allow React's lazy chart reveal while keeping timestamp assertions deterministic.
+  // Allow React to mount while keeping timestamp assertions deterministic.
   await expect.poll(async () => {
     await page.clock.runFor(100)
-    return page.getByText('Data table', { exact: true }).count()
-  }).toBe(1)
+    return page.getByRole('table', { name: 'Score history', exact: true }).locator('time').count()
+  }).toBe(6)
   await page.clock.setSystemTime(now)
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
 }
@@ -58,15 +58,21 @@ test('attempt dates are relative for a week, then local; exact dates are accessi
     await expect(time).toHaveAttribute('title', label)
     await expect(time).toHaveAccessibleDescription(label)
   }
+  await page.getByRole('link', { name: 'Progress', exact: true }).click()
+  await expect.poll(async () => {
+    await page.clock.runFor(100)
+    return page.getByText('Data table', { exact: true }).count()
+  }).toBe(1)
   await page.getByText('Data table', { exact: true }).click()
   const graphTimes = page.getByRole('table', { name: 'Progress data' }).locator('time')
   await expect(graphTimes).toHaveCount(6)
   await expect(graphTimes.last()).toHaveText('in 5 mins')
   const raw = await page.evaluate(() => localStorage.getItem('times-tables.scores'))
   await page.clock.runFor(2000)
+  await expect(graphTimes.nth(1)).toHaveText(await exact(page, records[5].completedAt))
+  await page.getByRole('link', { name: 'Practice', exact: true }).click()
   await expect(times.nth(1)).toHaveText(/^[23] secs ago$/)
   await expect(times.nth(4)).toHaveText(await exact(page, records[5].completedAt))
-  await expect(graphTimes.nth(1)).toHaveText(await exact(page, records[5].completedAt))
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(raw)
 })
 

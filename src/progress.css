@@ -1,11 +1,12 @@
-.progress { border-top: 1px solid var(--gray-7); margin-top: 30px; padding-top: 20px; }
+.progress { padding-top: 20px; }
 .progress-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
-.progress-heading > span { font-size: 13px; color: var(--gray-11); }
-.progress-controls { display: flex; gap: 24px; margin: 16px 0 12px; }
-.progress-summary { font-size: 12px; }
+.progress-controls { display: flex; gap: 12px; }
+.progress-controls select { border-color: transparent; background: transparent; color: var(--gray-11); font-size: 12px; }
+.progress-controls select:hover { color: var(--gray-12); background: var(--gray-3); }
+.progress-controls option { color: var(--gray-12); background: var(--gray-2); }
 .progress-empty { padding: 24px 0; }
-.progress-plot { height: 300px; margin-top: 16px; }
-.progress .recharts-legend-item { margin-right: 20px !important; }
+.progress-plot { height: 280px; margin-top: 24px; }
+.progress .recharts-legend-item { margin-right: 16px !important; }
 .progress .recharts-legend-item-text { color: var(--gray-11) !important; }
 .progress .recharts-scatter-symbol { cursor: crosshair; }
 .progress .recharts-line, .progress .recharts-line-dots { pointer-events: none; }

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Button, IconButton, SegmentedControl, Theme } from '@radix-ui/themes'
 import { createGrid, scoreAnswers, type Grid, type Mode } from './game'
 import { loadScores, saveScores, rankScores, type Score } from './scores'
@@ -13,6 +13,20 @@ function formatTime(ms: number) {
 }
 
 export default function App() {
+  const [page, setPage] = useState(() => window.location.pathname === '/progress' ? 'progress' : 'practice')
+  useEffect(() => {
+    const syncPage = () => setPage(window.location.pathname === '/progress' ? 'progress' : 'practice')
+    window.addEventListener('popstate', syncPage)
+    return () => window.removeEventListener('popstate', syncPage)
+  }, [])
+  function changePage(event: MouseEvent<HTMLAnchorElement>, next: 'practice' | 'progress') {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+    event.preventDefault()
+    if (page === next) return
+    window.history.pushState(null, '', next === 'progress' ? '/progress' : '/')
+    setPage(next)
+    window.scrollTo(0, 0)
+  }
   const [appearance, setAppearance] = useState<'dark' | 'light'>(() => {
     try {
       return localStorage.getItem('times-tables.theme') === 'light' ? 'light' : 'dark'
@@ -82,11 +96,11 @@ export default function App() {
   }
 
   useLayoutEffect(() => {
-    if (grid === null) startButton.current?.focus()
-  }, [grid])
+    if (page === 'practice' && grid === null) startButton.current?.focus()
+  }, [grid, page])
 
   useEffect(() => {
-    if (grid !== null) return
+    if (grid !== null || page !== 'practice') return
     function handleStartKey(event: globalThis.KeyboardEvent) {
       if (event.key !== 'Enter' && event.key !== ' ') return
       if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing || event.defaultPrevented) return
@@ -98,10 +112,10 @@ export default function App() {
     }
     window.addEventListener('keydown', handleStartKey)
     return () => window.removeEventListener('keydown', handleStartKey)
-  }, [grid, mode, size])
+  }, [grid, mode, size, page])
 
   useEffect(() => {
-    if (!running) return
+    if (!running || page !== 'practice') return
     function handleCancelKey(event: globalThis.KeyboardEvent) {
       if (event.key !== 'Escape' || event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return
       event.preventDefault()
@@ -109,7 +123,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handleCancelKey)
     return () => window.removeEventListener('keydown', handleCancelKey)
-  }, [running, size])
+  }, [running, size, page])
 
   function finish() {
     if (!running || !grid || filled === 0 || finished.current) return
@@ -129,7 +143,7 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (!running) return
+    if (!running || page !== 'practice') return
     function handleFinishKey(event: globalThis.KeyboardEvent) {
       if (event.key !== 'Enter' || event.defaultPrevented || event.repeat || event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
       const answerField = inputs.current.some(input => input !== null && input === event.target)
@@ -141,7 +155,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handleFinishKey)
     return () => window.removeEventListener('keydown', handleFinishKey)
-  }, [startedAt, grid, answers, history, mode, size])
+  }, [startedAt, grid, answers, history, mode, size, page])
 
   function navigate(event: KeyboardEvent<HTMLInputElement>, index: number) {
     if (event.altKey || event.ctrlKey || event.metaKey) return
@@ -165,7 +179,10 @@ export default function App() {
       <header className="page-header">
         <div><h1>Times tables<span className="title-mark" aria-hidden="true"> ×</span></h1></div>
         <div className="header-actions">
-          <span className="scope">1–{size} / {total} answers</span>
+          <nav className="page-nav" aria-label="Main">
+            <a href="/" aria-current={page === 'practice' ? 'page' : undefined} onClick={event => changePage(event, 'practice')}>Practice</a>
+            <a href="/progress" aria-current={page === 'progress' ? 'page' : undefined} onClick={event => changePage(event, 'progress')}>Progress</a>
+          </nav>
           <IconButton variant="ghost" color="gray" radius="full" onClick={toggleTheme}
             aria-label={`Switch to ${appearance === 'dark' ? 'light' : 'dark'} mode`}
             title={`Switch to ${appearance === 'dark' ? 'light' : 'dark'} mode`}>
@@ -177,6 +194,7 @@ export default function App() {
           </IconButton>
         </div>
       </header>
+      <div className="practice-page" hidden={page !== 'practice'}>
       <section className="toolbar" aria-label="Round controls">
         <SegmentedControl.Root aria-label="Table order" value={mode} onValueChange={value => updateSettings({ mode: value as Mode })} disabled={grid !== null}>
           <SegmentedControl.Item value="ordered">Ordered</SegmentedControl.Item>
@@ -234,7 +252,7 @@ export default function App() {
         <p>{running ? 'Enter finish · Space / Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit' : null}</p>
         {!result && <Button disabled={!running || filled === 0} onClick={finish} aria-keyshortcuts="Enter">{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
       </div>
-      <Suspense fallback={null}><ProgressChart scores={history.scores} initialSelection={{ mode, size }} /></Suspense>
+
       <section className="scores" aria-labelledby="scores-heading">
         <div className="score-heading"><h2 id="scores-heading">Score history</h2><div><span>{mode === 'ordered' ? 'Ordered' : 'Shuffled'} · {size} × {size} — </span><span>{perfect ? `Fastest perfect: ${formatTime(perfect.elapsedMs)}` : 'No perfect round yet'}</span></div></div>
         <div className="toolbar" role="group" aria-label="Score filters">
@@ -251,6 +269,8 @@ export default function App() {
           <tbody>{visibleScores.map(score => <tr key={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td><AttemptTime completedAt={score.completedAt} /></td><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{score.size} × {score.size}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>}
       </section>
+      </div>
+      {page === 'progress' && <Suspense fallback={<p role="status">Loading progress…</p>}><ProgressChart scores={history.scores} initialSelection={{ mode, size }} /></Suspense>}
     </main>
   </Theme>
 }

@@ -9,6 +9,12 @@ h1 { margin: 0; font-size: 27px; font-weight: 650; letter-spacing: -1px; }
 p { margin: 6px 0 0; color: var(--gray-11); font-size: 14px; line-height: 1.5; }
 .scope { color: var(--gray-11); font-size: 13px; }
 .header-actions { display: flex; align-items: center; gap: 20px; }
+.page-nav { display: flex; align-items: center; gap: 24px; font-size: 13px; }
+.page-nav a { color: var(--gray-11); text-decoration: none; padding: 8px 0; }
+.page-nav a:hover, .page-nav a[aria-current="page"] { color: var(--gray-12); }
+.page-nav a[aria-current="page"] { text-decoration: underline; text-underline-offset: 6px; text-decoration-color: var(--accent-9); }
+.page-nav a:focus-visible { outline: 2px solid var(--accent-9); outline-offset: 4px; border-radius: 2px; }
+.practice-page[hidden] { display: none; }
 .toolbar { display: flex; align-items: center; gap: 24px; margin-bottom: 18px; min-height: 32px; }
 .stats { display: flex; align-items: baseline; gap: 28px; margin-left: auto; color: var(--gray-11); font-size: 13px; }
 [role="timer"] { color: var(--gray-12); font-size: 23px; min-width: 92px; text-align: right; }
