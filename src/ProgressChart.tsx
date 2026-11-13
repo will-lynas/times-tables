@@ -64,7 +64,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
                 <time dateTime={point.completedAt}>{dateTime.format(point.timestamp)}</time>
               </div>
             }} />
-            <Line className="progress-results" data={perfect} dataKey="seconds" name="Perfect results" type="linear"
+            <Line className="progress-results" data={progress.points} dataKey="seconds" name="Saved results" type="linear"
               stroke="var(--gray-11)" strokeOpacity={0.25} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} />
             <Line className="progress-average" data={perfect} dataKey="averageSeconds" name="Average (10 perfect)" type="linear"
               stroke="var(--accent-11)" strokeWidth={1.75} dot={false} activeDot={false} isAnimationActive={false} />
@@ -73,7 +73,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The accent line is the trailing average of up to 10 perfect complete rounds for this exact order and factor set, using fewer rounds during warm-up. The faint line connects perfect complete rounds chronologically at their actual durations. These connecting lines do not represent continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
+      <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The accent line is the trailing average of up to 10 perfect complete rounds for this exact order and factor set, using fewer rounds during warm-up. The faint line connects all saved rounds chronologically at their actual durations, including partial and inaccurate rounds. These connecting lines do not represent continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
       <div className="progress-data">
         <table className="score-table" aria-label="Progress data">
           <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Attempted</th><th scope="col">Accuracy</th><th scope="col">Duration</th></tr></thead>

@@ -37,7 +37,7 @@ test('history, PB and graph distinguish same-cardinality factor sets, including 
   await graph.locator('.progress-perfect .recharts-scatter-symbol').last().hover()
   await expect(graph.locator('.progress-tooltip dd')).toHaveText(['100%', '25 / 25', '5s'])
   const rawLine = await graph.locator('.progress-results .recharts-line-curve').getAttribute('d')
-  expect([...rawLine!.matchAll(/[ML]/g)]).toHaveLength(2)
+  expect([...rawLine!.matchAll(/[ML]/g)]).toHaveLength(4)
   await expect(data.getByRole('row')).toHaveCount(5)
   const graphFilter = graph.getByRole('combobox', { name: 'Progress size', exact: true })
   await graphFilter.selectOption({ label: '{1, 3, 5, 7, 9}' })

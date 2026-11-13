@@ -23,7 +23,7 @@ async function seed(page: Page, records = scores) {
 }
 
 for (const appearance of ['dark', 'light'] as const) {
-  test(`faint chronological perfect-result line preserves geometry and point hovers in ${appearance}`, async ({ page }, info) => {
+  test(`faint chronological all-result line preserves geometry and point hovers in ${appearance}`, async ({ page }, info) => {
     await seed(page)
     if (appearance === 'light') await page.getByRole('button', { name: 'Switch to light mode' }).click()
     const graph = page.getByRole('region', { name: 'Progress', exact: true })
@@ -36,17 +36,17 @@ for (const appearance of ['dark', 'light'] as const) {
       const style = getComputedStyle(path)
       return {
         vertices: [...path.getAttribute('d')!.matchAll(/[ML]([\d.-]+),([\d.-]+)/g)].map(m => ({ x: Number(m[1]), y: Number(m[2]) })),
-        centers: [...element.querySelectorAll('.progress-perfect .recharts-scatter-symbol')].map(point => {
+        centers: [...element.querySelectorAll('.recharts-scatter-symbol')].map(point => {
           const box = point.getBoundingClientRect()
           return { x: box.x + box.width / 2 - svg.x, y: box.y + box.height / 2 - svg.y }
-        }),
+        }).sort((a, b) => a.x - b.x),
         stroke: style.stroke, neutral: getComputedStyle(element.querySelector('.progress-other .recharts-symbols')!).fill,
         opacity: Number(style.strokeOpacity), width: parseFloat(style.strokeWidth), pointerEvents: style.pointerEvents,
         averageOpacity: Number(getComputedStyle(average).strokeOpacity), averageWidth: parseFloat(getComputedStyle(average).strokeWidth),
         series: [...element.querySelectorAll('.recharts-line, .recharts-scatter')].map(series => series.getAttribute('class')),
       }
     })
-    expect(geometry.vertices).toHaveLength(3)
+    expect(geometry.vertices).toHaveLength(5)
     for (let i = 0; i < geometry.centers.length; i++) {
       expect(geometry.vertices[i].x).toBeCloseTo(geometry.centers[i].x, 2)
       expect(geometry.vertices[i].y).toBeCloseTo(geometry.centers[i].y, 2)
@@ -61,7 +61,7 @@ for (const appearance of ['dark', 'light'] as const) {
     expect(geometry.series[0]).toContain('progress-results')
     expect(geometry.series[1]).toContain('progress-average')
     await expect(graph.locator('.recharts-line-dots .recharts-dot')).toHaveCount(0)
-    await expect(graph.getByRole('img')).toHaveAccessibleDescription(/faint line connects perfect complete rounds chronologically/i)
+    await expect(graph.getByRole('img')).toHaveAccessibleDescription(/faint line connects all saved rounds chronologically/i)
     for (const [i, duration] of ['1m', '40s', '1m 20s'].entries()) {
       await graph.locator('.progress-perfect .recharts-scatter-symbol').nth(i).hover()
       await expect(graph.locator('.progress-tooltip-duration')).toHaveText(duration)
