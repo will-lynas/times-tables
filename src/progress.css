@@ -1,0 +1,18 @@
+.progress { border-top: 1px solid var(--gray-7); margin-top: 30px; padding-top: 20px; }
+.progress-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
+.progress-heading > span { font-size: 13px; color: var(--gray-11); }
+.progress-controls { display: flex; gap: 24px; margin: 16px 0 12px; }
+.progress-summary { font-size: 12px; }
+.progress-empty { padding: 24px 0; }
+.progress-plot { height: 300px; margin-top: 16px; }
+.progress .recharts-legend-item { margin-right: 20px !important; }
+.progress .recharts-legend-item-text { color: var(--gray-11) !important; }
+.progress .recharts-scatter-symbol { cursor: crosshair; }
+.progress .recharts-line, .progress .recharts-line-dots { pointer-events: none; }
+.progress-tooltip { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; border: 1px solid var(--gray-7); border-radius: 6px; background: var(--color-panel-solid); color: var(--gray-12); font-size: 12px; box-shadow: 0 2px 8px var(--black-a3); }
+.progress-tooltip strong { font-weight: 550; }
+.progress-data { margin-top: 8px; font-size: 12px; color: var(--gray-11); }
+.progress-data summary { cursor: pointer; width: fit-content; }
+.progress-data summary:focus-visible { outline: 2px solid var(--accent-9); outline-offset: 3px; border-radius: 2px; }
+.progress-data .score-table { color: var(--gray-12); }
+.progress-data .progress-muted { color: var(--gray-11); }

@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Button, IconButton, SegmentedControl, Theme } from '@radix-ui/themes'
 import { createGrid, scoreAnswers, type Grid, type Mode } from './game'
 import { loadScores, saveScores, rankScores, type Score } from './scores'
 import { loadSettings, saveSettings, type Settings } from './settings'
 import { GridSizePicker } from './GridSizePicker'
+const ProgressChart = lazy(() => import('./ProgressChart'))
 
 function formatTime(ms: number) {
   const tenths = Math.floor(ms / 100)
@@ -232,6 +233,7 @@ export default function App() {
         <p>{running ? 'Enter finish · Space / Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit' : null}</p>
         {!result && <Button disabled={!running || filled === 0} onClick={finish} aria-keyshortcuts="Enter">{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
       </div>
+      <Suspense fallback={null}><ProgressChart scores={history.scores} initialSelection={{ mode, size }} /></Suspense>
       <section className="scores" aria-labelledby="scores-heading">
         <div className="score-heading"><h2 id="scores-heading">Score history</h2><div><span>{mode === 'ordered' ? 'Ordered' : 'Shuffled'} · {size} × {size} — </span><span>{perfect ? `Fastest perfect: ${formatTime(perfect.elapsedMs)}` : 'No perfect round yet'}</span></div></div>
         <div className="toolbar" role="group" aria-label="Score filters">
