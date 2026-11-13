@@ -14,12 +14,12 @@ test('keeps saved partials separate from full-grid scores after reload', async (
   await startOrdered(page)
   await page.getByRole('textbox', { name: '1 × 1', exact: true }).fill('1')
   await page.getByRole('button', { name: 'Finish early', exact: true }).click()
-  const partials = page.getByRole('table', { name: 'Recent partial results', exact: true })
+  const partials = page.getByRole('table', { name: 'Partial results', exact: true })
   await expect(partials.getByRole('row')).toHaveCount(2)
   await expect(partials).toContainText('1 / 144')
   await expect(partials).toContainText('1 / 1')
   await expect(partials).toContainText('100%')
-  await expect(page.getByRole('table', { name: 'Ordered high scores · 12 × 12', exact: true }).getByRole('row')).toHaveCount(2)
+  await expect(page.getByRole('table', { name: 'High scores', exact: true }).getByRole('row')).toHaveCount(2)
   await expect(page.getByText('Fastest perfect: 0:01.0', { exact: true })).toBeVisible()
   await page.reload()
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
@@ -32,6 +32,8 @@ test('keeps saved partials separate from full-grid scores after reload', async (
   expect(saved.scores[0]).toMatchObject({ id: 'legacy-perfect', status: 'complete', attempted: 144, size: 12 })
   expect(saved.scores[1]).toMatchObject({ status: 'partial', attempted: 1, correct: 1 })
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
+  await expect(partials.getByRole('row')).toHaveCount(2)
+  await page.getByRole('combobox', { name: 'Score order' }).selectOption('shuffled')
   await expect(partials).toHaveCount(0)
 })
 
@@ -50,7 +52,7 @@ test('checks wrong answers on a full finish without changing complete scoring', 
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!).scores)
   expect(saved).toHaveLength(1)
   expect(saved[0]).toMatchObject({ status: 'complete', attempted: 144, correct: 143, total: 144, size: 12 })
-  await expect(page.getByRole('table', { name: 'Recent partial results', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('table', { name: 'Partial results', exact: true })).toHaveCount(0)
 })
 
 test('does not save an unfinished round on reload', async ({ page }) => {
@@ -58,7 +60,7 @@ test('does not save an unfinished round on reload', async ({ page }) => {
   await page.getByRole('textbox').first().fill('0')
   await page.reload()
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBeNull()
-  await expect(page.getByRole('heading', { name: 'Recent partial results' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Partial results' })).toHaveCount(0)
 })
 
 test('makes wrong attempted answers checkable without grading blanks', async ({ page }) => {
@@ -114,5 +116,5 @@ test('finishes early only after an attempt and freezes an honestly labelled part
   expect(saved.scores).toHaveLength(1)
   expect(saved.scores[0]).toMatchObject({ status: 'partial', attempted: 2, correct: 1, size: 12, total: 144, mode: 'ordered' })
   await expect(page.getByText('No perfect round yet', { exact: true })).toBeVisible()
-  await expect(page.getByRole('table', { name: 'Ordered high scores · 12 × 12', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('table', { name: 'High scores', exact: true })).toHaveCount(0)
 })

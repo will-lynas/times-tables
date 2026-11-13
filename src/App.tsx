@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from
 import { Button, IconButton, SegmentedControl, Theme } from '@radix-ui/themes'
 import { createGrid, scoreAnswers, type Grid, type Mode } from './game'
 import { loadScores, saveScores, rankScores, type Score } from './scores'
+import { loadSettings, saveSettings, type Settings } from './settings'
 
 function formatTime(ms: number) {
   const tenths = Math.floor(ms / 100)
@@ -27,12 +28,17 @@ export default function App() {
     }
   }
 
-  const [mode, setMode] = useState<Mode>('shuffled')
-  const [size, setSize] = useState(12)
+  const [settings, setSettings] = useState(loadSettings)
+  const { mode, size, scoreMode, scoreSize } = settings
+  function updateSettings(change: Partial<Settings>) {
+    const next = { ...settings, ...change }
+    setSettings(next)
+    saveSettings(next)
+  }
   const [grid, setGrid] = useState<Grid | null>(null)
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [elapsed, setElapsed] = useState(0)
-  const [answers, setAnswers] = useState<string[]>(Array(144).fill(''))
+  const [answers, setAnswers] = useState<string[]>(() => Array(size * size).fill(''))
   const [result, setResult] = useState<ReturnType<typeof scoreAnswers> | null>(null)
   const [history, setHistory] = useState(loadScores)
   const inputs = useRef<(HTMLInputElement | null)[]>([])
@@ -41,11 +47,14 @@ export default function App() {
   const filled = answers.filter(Boolean).length
   const ranked = rankScores(history.scores, mode, size)
   const perfect = ranked.find(score => score.correct === score.total)
-  const scoreHeading = `${mode === 'ordered' ? 'Ordered' : 'Shuffled'} high scores · ${size} × ${size}`
+
+  const visibleScores = history.scores.filter(score => (scoreMode === 'all' || score.mode === scoreMode)
+    && (scoreSize === 'all' || score.size === Number(scoreSize)))
+    .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
+  const completeScores = visibleScores.filter(score => score.status === 'complete')
+  const partials = visibleScores.filter(score => score.status === 'partial')
   const total = size * size
   const placeholders = Array.from({ length: size }, () => null)
-  const partials = history.scores.filter(score => score.status === 'partial' && score.mode === mode && score.size === size)
-    .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt)).slice(0, 5)
 
   useEffect(() => {
     if (startedAt === null) return
@@ -151,14 +160,14 @@ export default function App() {
         </div>
       </header>
       <section className="toolbar" aria-label="Round controls">
-        <SegmentedControl.Root aria-label="Table order" value={mode} onValueChange={value => setMode(value as Mode)} disabled={grid !== null}>
+        <SegmentedControl.Root aria-label="Table order" value={mode} onValueChange={value => updateSettings({ mode: value as Mode })} disabled={grid !== null}>
           <SegmentedControl.Item value="ordered">Ordered</SegmentedControl.Item>
           <SegmentedControl.Item value="shuffled">Shuffled</SegmentedControl.Item>
         </SegmentedControl.Root>
         <label className="grid-size">Grid size
           <select value={size} disabled={grid !== null} onChange={event => {
             const nextSize = Number(event.currentTarget.value)
-            setSize(nextSize)
+            updateSettings({ size: nextSize })
             setAnswers(Array(nextSize * nextSize).fill(''))
           }}>
             {Array.from({ length: 11 }, (_, index) => index + 2).map(option => <option key={option} value={option}>{option} × {option}</option>)}
@@ -213,20 +222,29 @@ export default function App() {
         {!result && <Button disabled={!running || filled === 0} onClick={finish}>{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
       </div>
       <section className="scores" aria-labelledby="scores-heading">
-        <div className="score-heading"><h2 id="scores-heading">{scoreHeading}</h2><span>{perfect ? `Fastest perfect: ${formatTime(perfect.elapsedMs)}` : 'No perfect round yet'}</span></div>
-        {ranked.length === 0 ? <p>Finish a full grid to set your first high score.</p> : <table className="score-table" aria-label={scoreHeading}>
-          <thead><tr><th>Rank</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
-          <tbody>{ranked.slice(0, 5).map((score, index) => <tr key={score.id}><td>{index + 1}</td><td>{score.correct} / {score.total}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
+        <div className="score-heading"><h2 id="scores-heading">High scores</h2><div><span>{mode === 'ordered' ? 'Ordered' : 'Shuffled'} · {size} × {size} — </span><span>{perfect ? `Fastest perfect: ${formatTime(perfect.elapsedMs)}` : 'No perfect round yet'}</span></div></div>
+        <div className="toolbar" role="group" aria-label="Score filters">
+          <label className="grid-size">Score order <select value={scoreMode} onChange={event => updateSettings({ scoreMode: event.currentTarget.value as Settings['scoreMode'] })}>
+            <option value="all">All orders</option><option value="ordered">Ordered</option><option value="shuffled">Shuffled</option>
+          </select></label>
+          <label className="grid-size">Score size <select value={scoreSize} onChange={event => updateSettings({ scoreSize: event.currentTarget.value === 'all' ? 'all' : Number(event.currentTarget.value) })}>
+            <option value="all">All sizes</option>
+            {Array.from({ length: 11 }, (_, index) => index + 2).map(option => <option key={option} value={option}>{option} × {option}</option>)}
+          </select></label>
+        </div>
+        {completeScores.length === 0 ? <p>{history.scores.some(score => score.status === 'complete') ? 'No completed rounds match these filters. Choose All orders and All sizes to see your saved scores.' : 'Finish a full grid to set your first high score.'}</p> : <table className="score-table" aria-label="High scores">
+          <thead><tr><th>Order</th><th>Size</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
+          <tbody>{completeScores.map(score => <tr key={score.id}><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{score.size} × {score.size}</td><td>{score.correct} / {score.total}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>}
-        <p className="storage-note">Best five complete rounds per mode and size. Accuracy first, then time. Scores stay in this browser only.</p>
+        <p className="storage-note">All completed rounds, newest first. Personal bests compare only matching order and size. Scores stay in this browser only.</p>
       </section>
       {partials.length > 0 && <section className="scores" aria-labelledby="partials-heading">
-        <h2 id="partials-heading">Recent partial results</h2>
-        <table className="score-table" aria-label="Recent partial results">
-          <thead><tr><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
-          <tbody>{partials.map(score => <tr key={score.id}><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
+        <h2 id="partials-heading">Partial results</h2>
+        <table className="score-table" aria-label="Partial results">
+          <thead><tr><th>Status</th><th>Order</th><th>Size</th><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
+          <tbody>{partials.map(score => <tr key={score.id}><td>Partial</td><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{score.size} × {score.size}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>
-        <p className="storage-note">Latest five for this mode and size. Partial results never count toward high scores or personal bests.</p>
+        <p className="storage-note">All matching partial results, newest first. Partial results never count toward high scores or personal bests.</p>
       </section>}
     </main>
   </Theme>

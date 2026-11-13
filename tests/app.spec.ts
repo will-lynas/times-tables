@@ -32,7 +32,7 @@ test('finishes only explicitly, freezes a perfect result and persists its score 
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
   await page.reload()
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
-  await expect(page.getByRole('table', { name: 'Ordered high scores' }).getByRole('row')).toHaveCount(2)
+  await expect(page.getByRole('table', { name: 'High scores' }).getByRole('row')).toHaveCount(2)
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
 })
 

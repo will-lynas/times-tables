@@ -78,23 +78,23 @@ for (const size of [2, 7]) {
   })
 }
 
-test('separates displayed scores by size and mode while preserving legacy rounds', async ({ page }) => {
+test('filters scores independently by size and mode while preserving legacy rounds', async ({ page }) => {
   const legacy = { id: 'legacy', mode: 'ordered', correct: 143, total: 144, elapsedMs: 12345, completedAt: '2026-01-02T12:00:00.000Z' }
   await page.goto('/')
   await page.evaluate(score => localStorage.setItem('times-tables.scores', JSON.stringify({ version: 1, scores: [score] })), legacy)
   await page.reload()
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
-  await expect(page.getByRole('table', { name: 'Ordered high scores' }).getByText('143 / 144', { exact: true })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'High scores', exact: true }).getByText('143 / 144', { exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: 'Grid size', exact: true }).selectOption('2')
-  await expect(page.getByRole('table', { name: 'Ordered high scores' })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Ordered high scores · 2 × 2', exact: true })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'High scores', exact: true }).getByText('143 / 144', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'High scores', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   for (const [index, answer] of ['1', '2', '2', '4'].entries()) {
     await page.getByRole('textbox').nth(index).fill(answer)
   }
   await page.getByRole('button', { name: 'Finish', exact: true }).click()
   const elapsed = await page.getByRole('timer').innerText()
-  const scores = page.getByRole('table', { name: 'Ordered high scores' })
+  const scores = page.getByRole('table', { name: 'High scores', exact: true })
   await expect(scores.getByText('4 / 4', { exact: true })).toBeVisible()
   await expect(scores.getByText('100%', { exact: true })).toBeVisible()
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
@@ -104,18 +104,22 @@ test('separates displayed scores by size and mode while preserving legacy rounds
   expect(saved.scores[0]).toEqual({ ...legacy, size: 12, status: 'complete', attempted: 144 })
   expect(saved.scores[1]).toMatchObject({ size: 2, mode: 'ordered', correct: 4, total: 4 })
   await page.reload()
-  await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Ordered high scores · 12 × 12', exact: true })).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeChecked()
+  await expect(page.getByRole('combobox', { name: 'Grid size' })).toHaveValue('2')
+  await expect(scores.getByRole('row')).toHaveCount(3)
+  await page.getByRole('combobox', { name: 'Score size' }).selectOption('12')
   await expect(scores.getByRole('row')).toHaveCount(2)
   await expect(scores.getByText('143 / 144', { exact: true })).toBeVisible()
-  await expect(page.getByText('No perfect round yet', { exact: true })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Grid size', exact: true }).selectOption('2')
+  await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Score size' }).selectOption('2')
   await expect(scores.getByRole('row')).toHaveCount(2)
   await expect(scores.getByText('4 / 4', { exact: true })).toBeVisible()
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
-  await expect(page.getByRole('table', { name: 'Shuffled high scores' })).toHaveCount(0)
+  await expect(scores.getByRole('row')).toHaveCount(2)
   await expect(page.getByText('No perfect round yet', { exact: true })).toBeVisible()
+  await page.getByRole('combobox', { name: 'Score order' }).selectOption('shuffled')
+  await expect(scores).toHaveCount(0)
 })
 
 test('offers every grid size from 2 to 12, defaulting to 12 with hidden factors', async ({ page }) => {
