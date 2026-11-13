@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test'
 
+test('theme control is a compact icon button with an accessible label', async ({ page }) => {
+  await page.goto('/')
+  const toggle = page.getByRole('button', { name: 'Switch to light mode' })
+  await expect(toggle).toHaveText('')
+  await expect(toggle.locator('svg')).toBeVisible()
+  const box = await toggle.boundingBox()
+  expect(box!.width).toBeLessThanOrEqual(40)
+  await toggle.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.radix-themes')).toHaveClass(/light/)
+  await expect(page.getByRole('button', { name: 'Switch to dark mode' })).toHaveText('')
+})
+
 test('defaults to dark and remembers a light-mode choice without interrupting a round', async ({ page }) => {
   await page.goto('/')
   const theme = page.locator('.radix-themes')
