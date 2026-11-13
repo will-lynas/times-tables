@@ -1,4 +1,27 @@
 import { expect, test, type Page } from '@playwright/test'
+import { chooseGridSize } from './helpers'
+
+test('keeps functional cues without explanatory filler', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('times-tables.scores', '{broken'))
+  await page.goto('/')
+  const filler = /One grid\. A little faster each time\.|The grid is revealed when you start\.|The timer won’t pause\.|Your finished grid stays here for review\.|All completed rounds, newest first\.|Personal bests compare only matching order and size\.|All matching partial results, newest first\./
+  await expect(page.locator('main')).not.toContainText(filler)
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toHaveAccessibleDescription('Enter or Space to start')
+  await expect(page.getByRole('alert')).toContainText('Saved scores could not be read.')
+  await expect(page.getByText('Scores stay in this browser only.', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('No rounds yet.', { exact: true })).toBeVisible()
+  await chooseGridSize(page, 2)
+  await page.getByRole('button', { name: 'Start', exact: true }).click()
+  await expect(page.locator('.grid-footer')).toContainText('Esc cancel')
+  await expect(page.locator('.grid-footer')).toContainText('Shift + Tab back')
+  await expect(page.locator('.grid-footer')).toContainText('Arrow keys move')
+  await page.getByRole('textbox').first().fill('0')
+  await page.getByRole('button', { name: 'Finish early' }).click()
+  await expect(page.getByRole('region', { name: 'Round result' })).toContainText('Partial result')
+  await expect(page.getByRole('region', { name: 'Round result' })).toContainText('1 / 4 attempted')
+  await expect(page.locator('main')).not.toContainText(filler)
+  await expect(page.getByRole('textbox').first()).toHaveAccessibleDescription(/^Incorrect\. Correct:/)
+})
 
 async function startOrdered(page: Page) {
   await page.goto('/')
@@ -32,7 +55,7 @@ test('finishes only explicitly, freezes a perfect result and persists its score 
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
   await page.reload()
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
-  await expect(page.getByRole('table', { name: 'High scores' }).getByRole('row')).toHaveCount(2)
+  await expect(page.getByRole('table', { name: 'Score history' }).getByRole('row')).toHaveCount(2)
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
 })
 
@@ -42,7 +65,7 @@ test('supports numeric editing and keyboard navigation without submitting', asyn
   await cells.nth(0).pressSequentially('a-1.2e')
   await expect(cells.nth(0)).toHaveValue('12')
   await expect(page.getByText('1 / 144 filled', { exact: true })).toBeVisible()
-  await cells.nth(0).press('Enter')
+  await cells.nth(0).press('Space')
   await expect(cells.nth(1)).toBeFocused()
   await cells.nth(1).press('Tab')
   await expect(cells.nth(2)).toBeFocused()

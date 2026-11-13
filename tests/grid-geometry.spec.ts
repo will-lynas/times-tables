@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
+import { chooseGridSize } from './helpers'
 
 async function expectSquareGrid(page: Page, size: number) {
   const geometry = await page.locator('.answer-grid').evaluate(table => {
@@ -40,7 +41,7 @@ for (const width of [1024, 1440]) {
         await page.addInitScript(theme => localStorage.setItem('times-tables.theme', theme), palette)
         await page.goto('/')
         await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
-        await page.getByRole('combobox', { name: 'Grid size' }).selectOption(String(size))
+        await chooseGridSize(page, size)
         const ready = await expectSquareGrid(page, size)
         const start = page.getByRole('button', { name: 'Start', exact: true })
         const button = (await start.boundingBox())!
@@ -103,7 +104,7 @@ test('every selectable size uses the same square geometry without overflow', asy
   await page.setViewportSize({ width: 1024, height: 900 })
   await page.goto('/')
   for (let size = 2; size <= 12; size++) {
-    await page.getByRole('combobox', { name: 'Grid size' }).selectOption(String(size))
+    await chooseGridSize(page, size)
     await expectSquareGrid(page, size)
   }
 })

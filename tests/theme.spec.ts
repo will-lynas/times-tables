@@ -73,7 +73,7 @@ test('answers, muted text and warnings stay readable in both themes', async ({ p
         })
         return channels[0] * 0.2126 + channels[1] * 0.7152 + channels[2] * 0.0722
       }
-      return ['.answer-grid input', '.page-header p', '.storage-warning'].map(selector => {
+      return ['.answer-grid input', '.grid-footer p', '.storage-warning'].map(selector => {
         const element = document.querySelector(selector)!
         let ancestor: Element | null = element
         let background = 'rgba(0, 0, 0, 0)'

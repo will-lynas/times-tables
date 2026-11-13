@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test'
+import { chooseGridSize } from './helpers'
 
 for (const mode of ['Ordered', 'Shuffled']) {
   for (const size of [2, 7, 12]) {
     test(`starts a ${size} × ${size} ${mode.toLowerCase()} grid with only its selected factors`, async ({ page }) => {
       await page.goto('/')
-      await page.getByRole('combobox', { name: 'Grid size', exact: true }).selectOption(String(size))
+      await chooseGridSize(page, size)
       await page.getByRole('radio', { name: mode, exact: true }).click()
       await page.getByRole('button', { name: 'Start', exact: true }).click()
       const table = page.getByRole('table', { name: 'Multiplication grid' })
@@ -17,7 +18,7 @@ for (const mode of ['Ordered', 'Shuffled']) {
       await expect(page.getByRole('textbox')).toHaveCount(size * size)
       await expect(page.getByRole('textbox').last()).toHaveAccessibleName(`${rows[size - 1]} × ${columns[size]}`)
       await expect(page.getByRole('textbox').first()).toBeFocused()
-      await expect(page.getByRole('combobox', { name: 'Grid size', exact: true })).toBeDisabled()
+      await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toBeDisabled()
       await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeDisabled()
       await expect(page.getByRole('radio', { name: 'Shuffled', exact: true })).toBeDisabled()
     })
@@ -27,7 +28,7 @@ for (const mode of ['Ordered', 'Shuffled']) {
 for (const size of [2, 7]) {
   test(`uses ${size} × ${size} keyboard navigation boundaries`, async ({ page }) => {
     await page.goto('/')
-    await page.getByRole('combobox', { name: 'Grid size', exact: true }).selectOption(String(size))
+    await chooseGridSize(page, size)
     await page.getByRole('button', { name: 'Start', exact: true }).click()
     const cells = page.getByRole('textbox')
     for (const [from, key, to] of [
@@ -35,7 +36,7 @@ for (const size of [2, 7]) {
       [0, 'ArrowRight', 1], [1, 'ArrowLeft', 0],
       [0, 'ArrowLeft', 0], [0, 'ArrowUp', 0],
       [size - 1, 'ArrowRight', size - 1], [size, 'ArrowLeft', size],
-      [size - 1, 'Enter', size], [size * size - 1, 'Enter', size * size - 1],
+      [size - 1, 'Space', size], [size * size - 1, 'Space', size * size - 1],
       [size * size - 1, 'ArrowDown', size * size - 1],
     ] as const) {
       await cells.nth(from).press(key)
@@ -48,7 +49,7 @@ for (const size of [2, 7]) {
 for (const size of [2, 7]) {
   test(`finishes a complete grid with ${size * size} answers and saves the matching total`, async ({ page }) => {
     await page.goto('/')
-    await page.getByRole('combobox', { name: 'Grid size', exact: true }).selectOption(String(size))
+    await chooseGridSize(page, size)
     await page.getByRole('button', { name: 'Start', exact: true }).click()
     const cells = page.getByRole('textbox')
     const finish = page.getByRole('button', { name: 'Finish', exact: true })
@@ -68,7 +69,7 @@ for (const size of [2, 7]) {
     await finish.click()
     await expect(page.getByText(`${size * size - 1} / ${size * size} correct`, { exact: true })).toBeVisible()
     await expect(page.getByText(`${Number(((size * size - 1) / (size * size) * 100).toFixed(1))}% accuracy`, { exact: true })).toBeVisible()
-    await expect(page.getByRole('combobox', { name: 'Grid size', exact: true })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toBeDisabled()
     await expect(cells.first()).toHaveAttribute('readonly', '')
     const elapsed = await page.getByRole('timer').innerText()
     await page.waitForTimeout(150)
@@ -84,18 +85,18 @@ test('filters scores independently by size and mode while preserving legacy roun
   await page.evaluate(score => localStorage.setItem('times-tables.scores', JSON.stringify({ version: 1, scores: [score] })), legacy)
   await page.reload()
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
-  await expect(page.getByRole('table', { name: 'High scores', exact: true }).getByText('143 / 144', { exact: true })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Grid size', exact: true }).selectOption('2')
-  await expect(page.getByRole('table', { name: 'High scores', exact: true }).getByText('143 / 144', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'High scores', exact: true })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByText('143 / 144', { exact: true })).toBeVisible()
+  await chooseGridSize(page, 2)
+  await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByText('143 / 144', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Score history', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   for (const [index, answer] of ['1', '2', '2', '4'].entries()) {
     await page.getByRole('textbox').nth(index).fill(answer)
   }
   await page.getByRole('button', { name: 'Finish', exact: true }).click()
   const elapsed = await page.getByRole('timer').innerText()
-  const scores = page.getByRole('table', { name: 'High scores', exact: true })
-  await expect(scores.getByText('4 / 4', { exact: true })).toBeVisible()
+  const scores = page.getByRole('table', { name: 'Score history', exact: true })
+  await expect(scores.getByText('4 / 4', { exact: true })).toHaveCount(2)
   await expect(scores.getByText('100%', { exact: true })).toBeVisible()
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!))
@@ -105,7 +106,7 @@ test('filters scores independently by size and mode while preserving legacy roun
   expect(saved.scores[1]).toMatchObject({ size: 2, mode: 'ordered', correct: 4, total: 4 })
   await page.reload()
   await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeChecked()
-  await expect(page.getByRole('combobox', { name: 'Grid size' })).toHaveValue('2')
+  await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('2 × 2')
   await expect(scores.getByRole('row')).toHaveCount(3)
   await page.getByRole('combobox', { name: 'Score size' }).selectOption('12')
   await expect(scores.getByRole('row')).toHaveCount(2)
@@ -113,7 +114,7 @@ test('filters scores independently by size and mode while preserving legacy roun
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: 'Score size' }).selectOption('2')
   await expect(scores.getByRole('row')).toHaveCount(2)
-  await expect(scores.getByText('4 / 4', { exact: true })).toBeVisible()
+  await expect(scores.getByText('4 / 4', { exact: true })).toHaveCount(2)
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
   await expect(scores.getByRole('row')).toHaveCount(2)
@@ -124,11 +125,10 @@ test('filters scores independently by size and mode while preserving legacy roun
 
 test('offers every grid size from 2 to 12, defaulting to 12 with hidden factors', async ({ page }) => {
   await page.goto('/')
-  const selector = page.getByRole('combobox', { name: 'Grid size', exact: true })
-  await expect(selector).toHaveValue('12')
-  await expect(selector.getByRole('option')).toHaveText(Array.from({ length: 11 }, (_, index) => `${index + 2} × ${index + 2}`))
+  const selector = page.getByRole('button', { name: 'Grid size', exact: true })
+  await expect(selector).toHaveText('12 × 12')
   for (let size = 2; size <= 12; size++) {
-    await selector.selectOption(String(size))
+    await chooseGridSize(page, size)
     await expect(page.getByRole('textbox')).toHaveCount(size * size)
     await expect(page.getByRole('textbox').last()).toHaveAccessibleName(`Row ${size}, column ${size}`)
     await expect(page.getByRole('textbox').first()).toBeDisabled()
