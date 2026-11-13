@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+import { presetFactors } from './factors'
 import { loadScores, saveScores, rankScores, SCORE_KEY, type Score } from './scores'
 
 function memoryStorage() {
@@ -8,7 +9,7 @@ function memoryStorage() {
 
 test.each([
   '{broken', 'null', '[]', '{}',
-  JSON.stringify({ version: 4, scores: [] }),
+  JSON.stringify({ version: 5, scores: [] }),
   JSON.stringify({ version: 1, scores: {} }),
   ...[
     null, { correct: undefined }, { id: '' }, { mode: 'unknown' }, { correct: -1 }, { correct: 145 },
@@ -40,8 +41,8 @@ test('persists scores in a versioned envelope and restores them', () => {
   expect(loadScores(() => storage)).toEqual({ scores: [], warning: null })
   const scores = [score('one', 144, 12345), { ...score('partial', 1, 1000), status: 'partial' as const, attempted: 2 }]
   expect(saveScores(scores, () => storage)).toBeNull()
-  expect(JSON.parse(storage.getItem(SCORE_KEY)!)).toEqual({ version: 3, scores })
-  expect(loadScores(() => storage)).toEqual({ scores, warning: null })
+  expect(JSON.parse(storage.getItem(SCORE_KEY)!)).toEqual({ version: 4, scores: scores.map(s => ({ ...s, factors: s.factors ?? presetFactors(s.size) })) })
+  expect(loadScores(() => storage)).toEqual({ scores: scores.map(s => ({ ...s, factors: s.factors ?? presetFactors(s.size) })), warning: null })
 })
 
 const score = (id: string, correct: number, elapsedMs: number, mode: Score['mode'] = 'shuffled'): Score => ({
@@ -54,12 +55,12 @@ test('migrates legacy scores to size 12 without losing them when saving a smalle
   const raw = JSON.stringify({ version: 1, scores: [legacy] })
   storage.setItem(SCORE_KEY, raw)
   const restored = loadScores(() => storage)
-  expect(restored).toEqual({ scores: [{ ...legacy, size: 12, status: 'complete', attempted: 144 }], warning: null })
+  expect(restored).toEqual({ scores: [{ ...legacy, size: 12, factors: presetFactors(12), status: 'complete', attempted: 144 }], warning: null })
   expect(storage.getItem(SCORE_KEY)).toBe(raw)
   const scores = [...restored.scores, { ...score('small', 4, 1000), size: 2, total: 4, attempted: 4 }]
   expect(saveScores(scores, () => storage)).toBeNull()
-  expect(JSON.parse(storage.getItem(SCORE_KEY)!)).toEqual({ version: 3, scores })
-  expect(loadScores(() => storage)).toEqual({ scores, warning: null })
+  expect(JSON.parse(storage.getItem(SCORE_KEY)!)).toEqual({ version: 4, scores: scores.map(s => ({ ...s, factors: s.factors ?? presetFactors(s.size) })) })
+  expect(loadScores(() => storage)).toEqual({ scores: scores.map(s => ({ ...s, factors: s.factors ?? presetFactors(s.size) })), warning: null })
 })
 
 test.each([
@@ -94,7 +95,7 @@ test.each([1, 2])('migrates version %i complete scores without rewriting storage
   const legacy = { id: 'old', mode: 'ordered', correct: size * size, total: size * size, elapsedMs: 1000, completedAt: '2026-01-02T12:00:00.000Z', ...(version === 2 ? { size } : {}) }
   const raw = JSON.stringify({ version, scores: [legacy] })
   storage.setItem(SCORE_KEY, raw)
-  expect(loadScores(() => storage)).toEqual({ scores: [{ ...legacy, size, status: 'complete', attempted: legacy.total }], warning: null })
+  expect(loadScores(() => storage)).toEqual({ scores: [{ ...legacy, size, factors: presetFactors(size), status: 'complete', attempted: legacy.total }], warning: null })
   expect(storage.getItem(SCORE_KEY)).toBe(raw)
 })
 

@@ -1,7 +1,8 @@
 import type { Mode } from './game'
-import type { Score } from './scores'
+import { scoreFactors, type Score } from './scores'
+import { factorKey, presetFactors } from './factors'
 
-export type ProgressSelection = { mode: Mode; size: number }
+export type ProgressSelection = { mode: Mode; size: number; factors?: number[]; warning?: string }
 export type ProgressPoint = Score & {
   timestamp: number
   seconds: number
@@ -12,7 +13,8 @@ export type ProgressPoint = Score & {
 }
 
 export function buildProgress(scores: readonly Score[], selection: ProgressSelection) {
-  const selected = scores.filter(score => score.mode === selection.mode && score.size === selection.size)
+  const key = factorKey(selection.factors ?? presetFactors(selection.size))
+  const selected = scores.filter(score => score.mode === selection.mode && factorKey(scoreFactors(score)) === key)
     .sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt))
   const window: number[] = []
   let perfectCount = 0

@@ -15,6 +15,8 @@ export async function showPractice(page: Page) {
 export async function chooseGridSize(page: Page, size: number) {
   const trigger = page.getByRole('button', { name: 'Grid size', exact: true })
   await trigger.click()
+  const presets = page.getByRole('button', { name: 'Presets', exact: true })
+  if (await presets.isVisible()) await presets.click()
   await page.getByRole('dialog', { name: 'Grid size options', exact: true })
     .getByRole('button', { name: `${size} × ${size}`, exact: true }).click()
   await expect(trigger).toHaveText(`${size} × ${size}`)

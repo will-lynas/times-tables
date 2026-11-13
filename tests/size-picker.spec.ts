@@ -36,9 +36,9 @@ for (const key of ['Enter', 'Space']) {
     await trigger.focus()
     await page.keyboard.press(key)
     await expect(panel.getByRole('button', { name: '12 × 12', exact: true })).toBeFocused()
-    for (const [key, size] of [['Home', 2], ['ArrowDown', 5], ['ArrowRight', 6], ['ArrowUp', 3], ['End', 12], ['ArrowLeft', 11]] as const) {
+    for (const [key, size] of [['Home', 2], ['ArrowDown', 5], ['ArrowRight', 6], ['ArrowUp', 3], ['End', 'Custom'], ['ArrowLeft', 12], ['ArrowLeft', 11]] as const) {
       await page.keyboard.press(key)
-      await expect(panel.getByRole('button', { name: `${size} × ${size}`, exact: true })).toBeFocused()
+      await expect(panel.getByRole('button', { name: size === 'Custom' ? 'Custom' : `${size} × ${size}`, exact: true })).toBeFocused()
     }
     await page.keyboard.press(key)
     await expect(panel).toHaveCount(0)
@@ -68,7 +68,7 @@ for (const width of [1024, 1440]) {
       await trigger.click()
       const panel = page.getByRole('dialog', { name: 'Grid size options', exact: true })
       const options = panel.getByRole('button')
-      await expect(options).toHaveText(Array.from({ length: 11 }, (_, index) => `${index + 2} × ${index + 2}`))
+      await expect(options).toHaveText([...Array.from({ length: 11 }, (_, index) => `${index + 2} × ${index + 2}`), 'Custom'])
       await expect(panel.getByRole('button', { name: '12 × 12', exact: true })).toHaveAttribute('aria-pressed', 'true')
       await expect(panel.getByRole('button', { name: '12 × 12', exact: true })).toBeFocused()
       const geometry = await panel.evaluate(element => {

@@ -75,7 +75,7 @@ for (const size of [2, 7]) {
     await page.waitForTimeout(150)
     await expect(page.getByRole('timer')).toHaveText(elapsed)
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!))
-    expect(saved).toMatchObject({ version: 3, scores: [{ size, total: size * size, correct: size * size - 1, mode: 'shuffled' }] })
+    expect(saved).toMatchObject({ version: 4, scores: [{ size, total: size * size, correct: size * size - 1, mode: 'shuffled' }] })
   })
 }
 
@@ -105,9 +105,9 @@ test('filters scores independently by size and mode while preserving legacy roun
   await expect(scores.getByText('100%', { exact: true })).toBeVisible()
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!))
-  expect(saved.version).toBe(3)
+  expect(saved.version).toBe(4)
   expect(saved.scores).toHaveLength(2)
-  expect(saved.scores[0]).toEqual({ ...legacy, size: 12, status: 'complete', attempted: 144 })
+  expect(saved.scores[0]).toEqual({ ...legacy, size: 12, factors: Array.from({ length: 12 }, (_, i) => i + 1), status: 'complete', attempted: 144 })
   expect(saved.scores[1]).toMatchObject({ size: 2, mode: 'ordered', correct: 4, total: 4 })
   await page.reload()
   await showPractice(page)

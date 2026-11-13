@@ -1,3 +1,5 @@
+import { canonicalFactors, presetFactors } from './factors'
+
 export type Mode = 'ordered' | 'shuffled'
 export type Grid = { size: number; rows: number[]; columns: number[]; products: number[] }
 
@@ -12,11 +14,9 @@ export function scoreAnswers(grid: Grid, answers: string[]) {
   return { status, correct, attempted, total: matches.length, accuracy: correct / attempted * 100, matches }
 }
 
-export function createGrid(mode: Mode, random = Math.random, size = 12): Grid {
-  if (!Number.isInteger(size) || size < 2 || size > 12) {
-    throw new Error('Grid size must be a whole number from 2 to 12.')
-  }
-  const rows = Array.from({ length: size }, (_, index) => index + 1)
+export function createGrid(mode: Mode, random = Math.random, selection: number | readonly number[] = 12): Grid {
+  const rows = typeof selection === 'number' ? presetFactors(selection) : canonicalFactors(selection)
+  const size = rows.length
   const columns = [...rows]
   if (mode === 'shuffled') {
     for (const axis of [rows, columns]) {

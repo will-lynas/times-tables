@@ -2,7 +2,9 @@ import { useMemo, useState } from 'react'
 import { Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { buildProgress, formatDuration, progressTimeDomain, type ProgressPoint, type ProgressSelection } from './progress'
 import { loadProgressSelection, saveProgressSelection } from './progressSettings'
-import type { Score } from './scores'
+import { scoreFactors, type Score } from './scores'
+import { factorOption, factorsFromOption, presetFactors, settingLabel as labelFactors } from './factors'
+import { FactorSetOptions } from './FactorSetOptions'
 import { AttemptTime } from './AttemptTime'
 import './progress.css'
 
@@ -14,7 +16,8 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
   const perfect = progress.points.filter(point => point.perfect)
   const other = progress.points.filter(point => !point.perfect)
   const domain = progressTimeDomain(progress.points)
-  const settingLabel = `${selection.mode === 'ordered' ? 'Ordered' : 'Shuffled'} · ${selection.size} × ${selection.size}`
+  const factors = selection.factors ?? presetFactors(selection.size)
+  const settingLabel = `${selection.mode === 'ordered' ? 'Ordered' : 'Shuffled'} · ${labelFactors(factors)}`
 
   function choose(change: Partial<ProgressSelection>) {
     const next = { ...selection, ...change }
@@ -29,11 +32,15 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
         <label className="grid-size"><span className="visually-hidden">Progress order</span><select value={selection.mode} onChange={event => choose({ mode: event.currentTarget.value as ProgressSelection['mode'] })}>
           <option value="ordered">Ordered</option><option value="shuffled">Shuffled</option>
         </select></label>
-        <label className="grid-size"><span className="visually-hidden">Progress size</span><select value={selection.size} onChange={event => choose({ size: Number(event.currentTarget.value) })}>
-          {Array.from({ length: 11 }, (_, index) => index + 2).map(size => <option key={size} value={size}>{size} × {size}</option>)}
+        <label className="grid-size"><span className="visually-hidden">Progress size</span><select value={factorOption(factors)} onChange={event => {
+          const values = factorsFromOption(event.currentTarget.value)
+          choose({ size: values.length, factors: values })
+        }}>
+          <FactorSetOptions sets={[...scores.map(scoreFactors), factors, initialSelection.factors ?? presetFactors(initialSelection.size)]} />
         </select></label>
       </div>
     </div>
+    {selection.warning && <p className="storage-warning" role="alert">{selection.warning}</p>}
     {progress.points.length === 0 ? <p className="progress-empty">No rounds for {settingLabel}.</p> : <>
       <div className="progress-plot" role="img" aria-label={`Duration by date: ${settingLabel}`} aria-describedby="progress-method">
         <ResponsiveContainer width="100%" height={280} minWidth={0}>
@@ -58,7 +65,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The accent line is the trailing average of up to 10 perfect complete rounds for this exact order and size, using fewer rounds during warm-up. Lines connect calculated averages, not continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
+      <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The accent line is the trailing average of up to 10 perfect complete rounds for this exact order and factor set, using fewer rounds during warm-up. Lines connect calculated averages, not continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
       <div className="progress-data">
         <table className="score-table" aria-label="Progress data">
           <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Attempted</th><th scope="col">Accuracy</th><th scope="col">Duration</th><th scope="col">Rolling 10 perfect</th></tr></thead>
