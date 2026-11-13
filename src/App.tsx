@@ -10,6 +10,7 @@ import { GridSizePicker } from './GridSizePicker'
 import { AttemptTime } from './AttemptTime'
 import { StatsSummary } from './StatsSummary'
 import { loadRunStarts, recordRunStart, RUN_META_KEY, RUN_START_PREFIX } from './statistics'
+import { loadTheme, saveTheme } from './theme'
 const ProgressChart = lazy(() => import('./ProgressChart'))
 
 function formatTime(ms: number) {
@@ -39,22 +40,13 @@ export default function App() {
     setPage(next)
     window.scrollTo(0, 0)
   }
-  const [appearance, setAppearance] = useState<'dark' | 'light'>(() => {
-    try {
-      return localStorage.getItem('times-tables.theme') === 'light' ? 'light' : 'dark'
-    } catch {
-      return 'dark'
-    }
-  })
+  const [theme, setTheme] = useState(loadTheme)
+  const { appearance } = theme
 
   function toggleTheme() {
     const next = appearance === 'dark' ? 'light' : 'dark'
-    setAppearance(next)
-    try {
-      localStorage.setItem('times-tables.theme', next)
-    } catch {
-      // Keep the choice for this page when browser storage is unavailable.
-    }
+    setTheme({ appearance: next, warning: theme.warning })
+    void saveTheme(next).then(warning => setTheme(current => ({ ...current, warning })))
   }
 
   const [settings, setSettings] = useState(loadSettings)
@@ -66,7 +58,9 @@ export default function App() {
   function updateSettings(change: Partial<Settings>) {
     const next = { ...settings, ...change }
     setSettings(next)
-    saveSettings(next)
+    void saveSettings(change).then(warning => {
+      if (warning) setSettings(current => ({ ...current, warning }))
+    })
   }
   const [grid, setGrid] = useState<Grid | null>(null)
   const [startedAt, setStartedAt] = useState<number | null>(null)
@@ -172,8 +166,15 @@ export default function App() {
     const scores = [...persisted, ...history.scores.filter(item => !persisted.some(saved => saved.id === item.id)), score]
     setStartedAt(null)
     setElapsed(elapsedMs)
-    setResult(completed)
-    setHistory({ scores, warning: saveScores(scores) })
+    setHistory({ scores, warning: history.warning })
+    void saveScores(scores).then(warning => {
+      setResult(completed)
+      setHistory(current => {
+        if (warning) return { ...current, warning }
+        const stored = loadScores()
+        return { scores: [...stored.scores, ...current.scores.filter(item => !stored.scores.some(saved => saved.id === item.id))], warning: stored.warning }
+      })
+    })
   }
 
   useEffect(() => {
@@ -232,6 +233,7 @@ export default function App() {
             </svg>
           </IconButton>
       </header>
+      {theme.warning && <p className="storage-warning" role="alert">{theme.warning}</p>}
       <div className="practice-page" hidden={page !== 'practice'}>
       <section className="toolbar" aria-label="Round controls">
         <SegmentedControl.Root aria-label="Table order" value={mode} onValueChange={value => updateSettings({ mode: value as Mode })} disabled={grid !== null}>

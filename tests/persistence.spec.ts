@@ -15,7 +15,7 @@ for (const failure of ['getter', 'write'] as const) {
     await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
     await chooseGridSize(page, 2)
     await completeGrid(page)
-    await expect(page.getByRole('alert')).toContainText('Score not saved')
+    await expect(page.getByRole('alert').filter({ hasText: 'Score not saved' })).toBeVisible()
     await expect(page.getByText('Score saved in this browser.', { exact: true })).toHaveCount(0)
     await showStats(page)
     await expect(page.getByRole('table', { name: 'Score history', exact: true })).toContainText('4 / 4')
@@ -40,6 +40,7 @@ test('shows every saved setting after refresh with independent history filters a
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await page.getByRole('textbox').first().fill('0')
   await page.getByRole('button', { name: 'Finish early' }).click()
+  await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
   const original = await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!))
   await page.evaluate(() => {
     const data = JSON.parse(localStorage.getItem('times-tables.scores')!)

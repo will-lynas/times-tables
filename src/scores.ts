@@ -2,8 +2,7 @@ import type { Mode } from './game'
 import { canonicalFactors, factorKey, presetFactors } from './factors'
 
 export const SCORE_KEY = 'times-tables.scores'
-type StorageAccess = () => Pick<Storage, 'getItem' | 'setItem'>
-const browserStorage: StorageAccess = () => window.localStorage
+import { backup, browserStorage, lockedWrite, mergeRecord, object } from './storage'
 
 function isScore(value: unknown): value is Score {
   if (typeof value !== 'object' || value === null) return false
@@ -20,43 +19,54 @@ function isScore(value: unknown): value is Score {
     && typeof s.completedAt === 'string' && Number.isFinite(Date.parse(s.completedAt))
 }
 
+function readScores(raw: string | null) {
+  if (raw === null) return { data: { version: 4, scores: [] } as Record<string, unknown>, scores: [] as Score[] }
+  const data: unknown = JSON.parse(raw)
+  if (!object(data) || ![1, 2, 3, 4].includes(data.version as number) || !Array.isArray(data.scores)) throw new Error('Unsupported scores')
+  let records = data.scores
+  // Explicit additive steps. Reserved fields present in a legacy record must
+  // agree with the migration, otherwise preserve the source rather than repair it.
+  for (let version = data.version as number; version < 4; version++) {
+    records = records.map(value => {
+      if (!object(value)) throw new Error('Invalid record')
+      const additions = version === 1 ? { size: 12 }
+        : version === 2 ? { status: 'complete', attempted: value.total }
+        : { factors: presetFactors(value.size as number) }
+      return mergeRecord(value, additions)
+    })
+  }
+  if (!records.every(isScore)) throw new Error('Invalid score data')
+  const ids = new Set(records.map(score => score.id))
+  if (ids.size !== records.length) throw new Error('Duplicate record IDs')
+  return { data, scores: records }
+}
+
 export function loadScores(getStorage = browserStorage): { scores: Score[]; warning: string | null } {
   try {
-    const raw = getStorage().getItem(SCORE_KEY)
-    if (raw === null) return { scores: [], warning: null }
-    const data: unknown = JSON.parse(raw)
-    if (typeof data !== 'object' || data === null || !('version' in data) || (data.version !== 1 && data.version !== 2 && data.version !== 3 && data.version !== 4)
-      || !('scores' in data) || !Array.isArray(data.scores)) {
-      throw new Error('Invalid score data')
-    }
-    const scores: unknown[] = data.scores.map(value => {
-      if (typeof value !== 'object' || value === null) return null
-      if (data.version === 4) {
-        const factors = canonicalFactors(value.factors)
-        if (factors.length !== value.size) throw new Error('Inconsistent factors')
-        return { ...value, factors }
-      }
-      const size = data.version === 1 ? 12 : value.size
-      const factors = presetFactors(size)
-      return { ...value, size, factors, ...(data.version === 3 ? {} : { status: 'complete', attempted: value.total }) }
-    })
-    if (!scores.every(isScore)) throw new Error('Invalid score data')
-    return { scores, warning: null }
+    return { scores: readScores(getStorage().getItem(SCORE_KEY)).scores, warning: null }
   } catch {
-    return { scores: [], warning: 'Saved scores could not be read. You can still play; scores may not persist.' }
+    return { scores: [], warning: 'Saved scores could not be read. Original data has been kept; you can still play on this page.' }
   }
 }
 
-export function saveScores(scores: Score[], getStorage = browserStorage): string | null {
-  try {
-    if (loadScores(getStorage).warning) return 'Score not saved: existing saved scores could not be read. Original data has been kept.'
-    const normalized = scores.map(score => ({ ...score, factors: scoreFactors(score) }))
-    if (!normalized.every(isScore)) throw new Error('Invalid scores')
-    getStorage().setItem(SCORE_KEY, JSON.stringify({ version: 4, scores: normalized }))
-    return null
-  } catch {
-    return 'Score not saved: browser storage is unavailable or full. This result is kept only on this page.'
-  }
+// Append/union, never replacement. All app writers participate in Web Locks.
+export async function saveScores(scores: Score[], getStorage = browserStorage): Promise<string | null> {
+  const warning = await lockedWrite(SCORE_KEY, () => {
+    const storage = getStorage()
+    const raw = storage.getItem(SCORE_KEY)
+    const existing = readScores(raw)
+    const records = [...existing.scores]
+    for (const score of scores) {
+      const incoming = score.factors === undefined ? { ...score, factors: presetFactors(score.size) } : score
+      if (!isScore(incoming)) throw new Error('Invalid score')
+      const index = records.findIndex(item => item.id === incoming.id)
+      if (index < 0) records.push(incoming)
+      else records[index] = mergeRecord(records[index], incoming) as Score
+    }
+    if (raw !== null && existing.data.version !== 4) backup(storage, SCORE_KEY, existing.data.version as number, raw)
+    storage.setItem(SCORE_KEY, JSON.stringify({ ...existing.data, version: 4, scores: records }))
+  })
+  return warning ? `Score not saved: ${warning}` : null
 }
 
 export type Score = {

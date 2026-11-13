@@ -1,12 +1,14 @@
 import type { ProgressSelection } from './progress'
 import { canonicalFactors } from './factors'
+import { browserStorage, readPreferences, STORAGE_WARNING, writePreferences } from './storage'
 
 const KEY = 'times-tables.progress'
 
 export function loadProgressSelection(fallback: ProgressSelection): ProgressSelection {
   try {
-    const data: unknown = JSON.parse(localStorage.getItem(KEY) ?? 'null')
-    if (typeof data !== 'object' || data === null) return fallback
+    const { raw, data } = readPreferences(browserStorage(), KEY)
+    if (raw === null) return fallback
+    if (!validSelection(data)) return { ...fallback, warning: STORAGE_WARNING }
     const { mode, size, factors } = data as Record<string, unknown>
     if (factors !== undefined) {
       try {
@@ -20,17 +22,19 @@ export function loadProgressSelection(fallback: ProgressSelection): ProgressSele
     return (mode === 'ordered' || mode === 'shuffled') && typeof size === 'number' && Number.isInteger(size) && size >= 2 && size <= 12
       ? { mode, size } : fallback
   } catch {
-    return fallback
+    return { ...fallback, warning: STORAGE_WARNING }
   }
 }
 
-export function saveProgressSelection(selection: ProgressSelection) {
+function validSelection(data: Record<string, unknown>): boolean {
   try {
-    const raw = localStorage.getItem(KEY)
-    if (raw !== null) JSON.parse(raw)
-    if (loadProgressSelection(selection).warning) return
-    localStorage.setItem(KEY, JSON.stringify(selection))
-  } catch {
-    // Keep controls usable when browser storage is unavailable.
-  }
+    if (Object.keys(data).length === 0) return true
+    if (data.mode !== 'ordered' && data.mode !== 'shuffled') return false
+    if (data.factors !== undefined) return canonicalFactors(data.factors).length === data.size
+    return Number.isInteger(data.size) && (data.size as number) >= 2 && (data.size as number) <= 12
+  } catch { return false }
+}
+
+export function saveProgressSelection(change: Partial<ProgressSelection>, defaults?: ProgressSelection): Promise<string | null> {
+  return writePreferences(KEY, change, validSelection, defaults)
 }

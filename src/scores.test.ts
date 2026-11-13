@@ -16,7 +16,7 @@ test.each([
     { correct: 1.5 }, { total: 12 }, { elapsedMs: -1 }, { elapsedMs: '100' },
     { elapsedMs: null }, { completedAt: 'yesterday' },
   ].map(change => JSON.stringify({ version: 1, scores: [change === null ? null : { id: 'x', mode: 'ordered', correct: 144, total: 144, elapsedMs: 10, completedAt: '2026-01-02T12:00:00.000Z', ...change }] })),
-])('ignores corrupt or unsupported stored data with a warning (%#)', raw => {
+])('ignores corrupt or unsupported stored data with a warning (%#)', async raw => {
   const storage = memoryStorage()
   storage.setItem(SCORE_KEY, raw)
   const result = loadScores(() => storage)
@@ -25,22 +25,22 @@ test.each([
   expect(storage.getItem(SCORE_KEY)).toBe(raw)
 })
 
-test.each(['SecurityError', 'QuotaExceededError'])('reports denied writes rather than claiming scores were saved: %s', name => {
+test.each(['SecurityError', 'QuotaExceededError'])('reports denied writes rather than claiming scores were saved: %s', async name => {
   const storage = { getItem: () => null, setItem: () => { throw new DOMException('Blocked', name) } }
-  expect(saveScores([score('one', 144, 1000)], () => storage)).toMatch(/not saved/i)
+  expect(await saveScores([score('one', 144, 1000)], () => storage)).toMatch(/not saved/i)
 })
 
-test('catches an unavailable localStorage getter', () => {
+test('catches an unavailable localStorage getter', async () => {
   const denied = () => { throw new DOMException('Blocked', 'SecurityError') }
   expect(loadScores(denied).warning).toMatch(/could not be read/i)
-  expect(saveScores([], denied)).toMatch(/not saved/i)
+  expect(await saveScores([], denied)).toMatch(/not saved/i)
 })
 
-test('persists scores in a versioned envelope and restores them', () => {
+test('persists scores in a versioned envelope and restores them', async () => {
   const storage = memoryStorage()
   expect(loadScores(() => storage)).toEqual({ scores: [], warning: null })
   const scores = [score('one', 144, 12345), { ...score('partial', 1, 1000), status: 'partial' as const, attempted: 2 }]
-  expect(saveScores(scores, () => storage)).toBeNull()
+  expect(await saveScores(scores, () => storage)).toBeNull()
   expect(JSON.parse(storage.getItem(SCORE_KEY)!)).toEqual({ version: 4, scores: scores.map(s => ({ ...s, factors: s.factors ?? presetFactors(s.size) })) })
   expect(loadScores(() => storage)).toEqual({ scores: scores.map(s => ({ ...s, factors: s.factors ?? presetFactors(s.size) })), warning: null })
 })
@@ -49,7 +49,7 @@ const score = (id: string, correct: number, elapsedMs: number, mode: Score['mode
   id, mode, status: 'complete', attempted: 144, size: 12, correct, total: 144, elapsedMs, completedAt: '2026-01-02T12:00:00.000Z',
 })
 
-test('migrates legacy scores to size 12 without losing them when saving a smaller round', () => {
+test('migrates legacy scores to size 12 without losing them when saving a smaller round', async () => {
   const storage = memoryStorage()
   const legacy = { id: 'legacy', mode: 'ordered', correct: 143, total: 144, elapsedMs: 12345, completedAt: '2026-01-02T12:00:00.000Z' }
   const raw = JSON.stringify({ version: 1, scores: [legacy] })
@@ -58,7 +58,7 @@ test('migrates legacy scores to size 12 without losing them when saving a smalle
   expect(restored).toEqual({ scores: [{ ...legacy, size: 12, factors: presetFactors(12), status: 'complete', attempted: 144 }], warning: null })
   expect(storage.getItem(SCORE_KEY)).toBe(raw)
   const scores = [...restored.scores, { ...score('small', 4, 1000), size: 2, total: 4, attempted: 4 }]
-  expect(saveScores(scores, () => storage)).toBeNull()
+  expect(await saveScores(scores, () => storage)).toBeNull()
   expect(JSON.parse(storage.getItem(SCORE_KEY)!)).toEqual({ version: 4, scores: scores.map(s => ({ ...s, factors: s.factors ?? presetFactors(s.size) })) })
   expect(loadScores(() => storage)).toEqual({ scores: scores.map(s => ({ ...s, factors: s.factors ?? presetFactors(s.size) })), warning: null })
 })
@@ -74,7 +74,7 @@ test.each([
   expect(storage.getItem(SCORE_KEY)).toBe(raw)
 })
 
-test('ranks scores only against the same size and mode', () => {
+test('ranks scores only against the same size and mode', async () => {
   const scores = [
     score('large', 144, 100),
     { ...score('small-wrong', 3, 100), size: 2, total: 4, attempted: 4 },
@@ -89,7 +89,7 @@ test('ranks scores only against the same size and mode', () => {
 
 })
 
-test.each([1, 2])('migrates version %i complete scores without rewriting storage on read', version => {
+test.each([1, 2])('migrates version %i complete scores without rewriting storage on read', async version => {
   const storage = memoryStorage()
   const size = version === 1 ? 12 : 6
   const legacy = { id: 'old', mode: 'ordered', correct: size * size, total: size * size, elapsedMs: 1000, completedAt: '2026-01-02T12:00:00.000Z', ...(version === 2 ? { size } : {}) }
@@ -114,7 +114,7 @@ test.each([
   expect(storage.getItem(SCORE_KEY)).toBe(raw)
 })
 
-test('excludes partial results and other sizes from full-grid rankings', () => {
+test('excludes partial results and other sizes from full-grid rankings', async () => {
   const scores: Score[] = [score('full', 140, 2000),
     { ...score('partial', 1, 1), status: 'partial', attempted: 1 },
     { ...score('small', 36, 1000), size: 6, total: 36, attempted: 36 },
@@ -123,7 +123,7 @@ test('excludes partial results and other sizes from full-grid rankings', () => {
   expect(rankScores(scores, 'shuffled', 6).map(item => item.id)).toEqual(['small'])
 })
 
-test('ranks one mode by accuracy then elapsed time without changing the source', () => {
+test('ranks one mode by accuracy then elapsed time without changing the source', async () => {
   const scores = [score('fast-wrong', 143, 100), score('slow-perfect', 144, 2000),
     score('fast-perfect', 144, 1000), score('other-mode', 144, 50, 'ordered')]
   expect(rankScores(scores, 'shuffled').map(item => item.id)).toEqual(['fast-perfect', 'slow-perfect', 'fast-wrong'])

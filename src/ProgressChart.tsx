@@ -23,7 +23,9 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
   function choose(change: Partial<ProgressSelection>) {
     const next = { ...selection, ...change }
     setSelection(next)
-    saveProgressSelection(next)
+    void saveProgressSelection(change, selection).then(warning => {
+      if (warning) setSelection(current => ({ ...current, warning }))
+    })
   }
 
   return <section className="progress" aria-labelledby="progress-heading">

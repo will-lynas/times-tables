@@ -1,5 +1,6 @@
 import type { Mode } from './game'
 import { canonicalFactors, factorOption, factorsFromOption } from './factors'
+import { browserStorage, readPreferences, STORAGE_WARNING, writePreferences } from './storage'
 
 const SETTINGS_KEY = 'times-tables.settings'
 export type Settings = { mode: Mode; size: number; scoreMode: Mode | 'all'; scoreSize: number | 'all';
@@ -8,8 +9,7 @@ export type Settings = { mode: Mode; size: number; scoreMode: Mode | 'all'; scor
 export function loadSettings(): Settings {
   const defaults: Settings = { mode: 'shuffled', size: 12, scoreMode: 'all', scoreSize: 'all' }
   try {
-    const data: unknown = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? 'null')
-    if (typeof data !== 'object' || data === null) return defaults
+    const { data } = readPreferences(browserStorage(), SETTINGS_KEY)
     const { mode, size, scoreMode, scoreSize, choice, customFactors, scoreFactors } = data as Record<string, unknown>
     let custom: Partial<Settings> = {}
     if (customFactors !== undefined || choice === 'custom') {
@@ -22,6 +22,7 @@ export function loadSettings(): Settings {
     }
     return {
       ...custom, ...filter,
+      ...(!validSettings(data) && !custom.warning ? { warning: STORAGE_WARNING } : {}),
       ...(choice === 'custom' || choice === 'preset' ? { choice } : {}),
       mode: mode === 'ordered' || mode === 'shuffled' ? mode : defaults.mode,
       size: typeof size === 'number' && Number.isInteger(size) && size >= 2 && size <= 12 ? size : defaults.size,
@@ -29,17 +30,27 @@ export function loadSettings(): Settings {
       scoreSize: typeof scoreSize === 'number' && Number.isInteger(scoreSize) && scoreSize >= 2 && scoreSize <= 12 ? scoreSize : 'all',
     }
   } catch {
-    return defaults
+    return { ...defaults, warning: STORAGE_WARNING }
   }
 }
 
-export function saveSettings(settings: Settings) {
+function validSettings(data: Record<string, unknown>): boolean {
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY)
-    if (raw !== null) JSON.parse(raw) // Never replace unreadable original bytes.
-    if (loadSettings().warning) return
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
-  } catch {
-    // Keep this page usable when browser storage is unavailable.
-  }
+    if ('mode' in data && data.mode !== 'ordered' && data.mode !== 'shuffled') return false
+    if ('scoreMode' in data && !['all', 'ordered', 'shuffled'].includes(data.scoreMode as string)) return false
+    for (const key of ['size', 'scoreSize']) {
+      const value = data[key]
+      if (value !== undefined && !(key === 'scoreSize' && value === 'all') && !(Number.isInteger(value) && (value as number) >= 2 && (value as number) <= 12)) return false
+    }
+    if ('choice' in data && data.choice !== 'preset' && data.choice !== 'custom') return false
+    if ('customFactors' in data) canonicalFactors(data.customFactors, true)
+    if (data.choice === 'custom' && !('customFactors' in data)) return false
+    if (data.scoreFactors !== undefined) factorsFromOption(data.scoreFactors as string)
+    return true
+  } catch { return false }
+}
+
+// Pass only intentional changes, not a stale UI snapshot.
+export function saveSettings(change: Partial<Settings>): Promise<string | null> {
+  return writePreferences(SETTINGS_KEY, change, validSettings)
 }

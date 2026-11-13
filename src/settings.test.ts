@@ -16,32 +16,32 @@ function storage(raw: string | null) {
 test.each([null, '{broken', 'null', '[]', '{}', '"ordered"', JSON.stringify({ mode: 'invalid', size: '2' }),
   ...[0, 1, 13, 2.5].map(size => JSON.stringify({ size })),
   ...[0, 1, 13, 2.5, '2', null].map(scoreSize => JSON.stringify({ scoreMode: 'invalid', scoreSize })),
-])('falls back safely for missing or invalid settings (%#)', raw => {
+])('falls back safely for missing or invalid settings (%#)', async raw => {
   storage(raw)
-  expect(loadSettings()).toEqual(defaults)
+  expect(loadSettings()).toMatchObject(defaults)
 })
 
-test('restores validated round settings and history filters independently', () => {
+test('restores validated round settings and history filters independently', async () => {
   storage(JSON.stringify({ mode: 'ordered', size: 99, scoreMode: 'shuffled', scoreSize: 2 }))
-  expect(loadSettings()).toEqual({ ...defaults, mode: 'ordered', scoreMode: 'shuffled', scoreSize: 2 })
+  expect(loadSettings()).toEqual({ ...defaults, mode: 'ordered', scoreMode: 'shuffled', scoreSize: 2, warning: expect.any(String) })
   storage(JSON.stringify({ mode: 'invalid', size: 2, scoreMode: 'invalid', scoreSize: 13 }))
-  expect(loadSettings()).toEqual({ ...defaults, size: 2 })
+  expect(loadSettings()).toEqual({ ...defaults, size: 2, warning: expect.any(String) })
 })
 
-test('saves and restores settings without touching score history', () => {
+test('saves and restores settings without touching score history', async () => {
   const values = storage(null)
   values.set('times-tables.scores', 'existing history')
   const settings = { mode: 'ordered' as const, size: 7, scoreMode: 'shuffled' as const, scoreSize: 3 }
-  saveSettings(settings)
+  await saveSettings(settings)
   expect(loadSettings()).toEqual(settings)
   expect(values.get('times-tables.scores')).toBe('existing history')
 })
 
-test('handles unavailable storage access and failed writes', () => {
+test('handles unavailable storage access and failed writes', async () => {
   vi.stubGlobal('localStorage', {
     getItem: () => { throw new DOMException('Blocked', 'SecurityError') },
     setItem: () => { throw new DOMException('Full', 'QuotaExceededError') },
   })
-  expect(loadSettings()).toEqual(defaults)
+  expect(loadSettings()).toMatchObject(defaults)
   expect(() => saveSettings({ ...defaults, mode: 'ordered', size: 2 })).not.toThrow()
 })
