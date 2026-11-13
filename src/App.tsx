@@ -14,18 +14,25 @@ function formatTime(ms: number) {
   return `${Math.floor(tenths / 600)}:${String(Math.floor(tenths / 10) % 60).padStart(2, '0')}.${tenths % 10}`
 }
 
+type Page = 'practice' | 'stats' | 'about'
+
+function pageFromPath(): Page {
+  if (window.location.pathname === '/about') return 'about'
+  return ['/stats', '/progress'].includes(window.location.pathname) ? 'stats' : 'practice'
+}
+
 export default function App() {
-  const [page, setPage] = useState(() => ['/stats', '/progress'].includes(window.location.pathname) ? 'stats' : 'practice')
+  const [page, setPage] = useState<Page>(pageFromPath)
   useEffect(() => {
-    const syncPage = () => setPage(['/stats', '/progress'].includes(window.location.pathname) ? 'stats' : 'practice')
+    const syncPage = () => setPage(pageFromPath())
     window.addEventListener('popstate', syncPage)
     return () => window.removeEventListener('popstate', syncPage)
   }, [])
-  function changePage(event: MouseEvent<HTMLAnchorElement>, next: 'practice' | 'stats') {
+  function changePage(event: MouseEvent<HTMLAnchorElement>, next: Page) {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
     if (page === next) return
-    window.history.pushState(null, '', next === 'stats' ? '/stats' : '/')
+    window.history.pushState(null, '', next === 'practice' ? '/' : `/${next}`)
     setPage(next)
     window.scrollTo(0, 0)
   }
@@ -187,6 +194,7 @@ export default function App() {
           <nav className="page-nav" aria-label="Main">
             <a href="/" aria-current={page === 'practice' ? 'page' : undefined} onClick={event => changePage(event, 'practice')}>Practice</a>
             <a href="/stats" aria-current={page === 'stats' ? 'page' : undefined} onClick={event => changePage(event, 'stats')}>Stats</a>
+            <a href="/about" aria-current={page === 'about' ? 'page' : undefined} onClick={event => changePage(event, 'about')}>About</a>
           </nav>
           <IconButton variant="ghost" color="gray" radius="full" onClick={toggleTheme}
             aria-label={`Switch to ${appearance === 'dark' ? 'light' : 'dark'} mode`}
@@ -281,6 +289,11 @@ export default function App() {
         </table>}
       </section>
       </div>}
+      {page === 'about' && <section className="about-page" aria-labelledby="about-heading">
+        <h2 id="about-heading">About</h2>
+        <p><a href="https://github.com/will-lynas/times-tables">GitHub</a></p>
+        <p>Styling inspired by <a href="https://monkeytype.com/">Monkeytype</a>.</p>
+      </section>}
     </main>
   </Theme>
 }
