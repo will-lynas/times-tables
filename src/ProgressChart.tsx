@@ -52,12 +52,20 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
               const point: ProgressPoint | undefined = payload?.[0]?.payload
               if (!active || !point) return null
               return <div className="progress-tooltip">
-                <strong>{dateTime.format(point.timestamp)}</strong>
-                <span>{point.status === 'complete' ? 'Complete' : 'Partial'} · {formatDuration(point.seconds)}</span>
-                <span>{point.attempted} / {point.total} attempted · {Number(point.accuracy.toFixed(1))}% accuracy</span>
-                {point.perfect && <span>Rolling average {formatDuration(point.averageSeconds!)} ({point.averageCount}/10)</span>}
+                <div className="progress-tooltip-heading">
+                  <strong className="progress-tooltip-duration">{formatDuration(point.seconds)}</strong>
+                  <span className="progress-tooltip-status">{point.status === 'complete' ? 'Complete' : 'Partial'}</span>
+                </div>
+                <dl>
+                  <dt>Accuracy</dt><dd>{Number(point.accuracy.toFixed(1))}%</dd>
+                  <dt>Answered</dt><dd>{point.attempted} / {point.total}</dd>
+                  {point.perfect && <><dt>Average</dt><dd>{formatDuration(point.averageSeconds!)}</dd></>}
+                </dl>
+                <time dateTime={point.completedAt}>{dateTime.format(point.timestamp)}</time>
               </div>
             }} />
+            <Line className="progress-results" data={perfect} dataKey="seconds" name="Perfect results" type="linear"
+              stroke="var(--gray-11)" strokeOpacity={0.25} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} />
             <Line className="progress-average" data={perfect} dataKey="averageSeconds" name="Average (10 perfect)" type="linear"
               stroke="var(--accent-11)" strokeWidth={1.75} dot={false} activeDot={false} isAnimationActive={false} />
             <Scatter className="progress-other" name="Partial / inaccurate" data={other} fill="var(--gray-11)" fillOpacity={0.4} isAnimationActive={false} />
@@ -65,15 +73,14 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The accent line is the trailing average of up to 10 perfect complete rounds for this exact order and factor set, using fewer rounds during warm-up. Lines connect calculated averages, not continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
+      <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The accent line is the trailing average of up to 10 perfect complete rounds for this exact order and factor set, using fewer rounds during warm-up. The faint line connects perfect complete rounds chronologically at their actual durations. These connecting lines do not represent continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
       <div className="progress-data">
         <table className="score-table" aria-label="Progress data">
-          <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Attempted</th><th scope="col">Accuracy</th><th scope="col">Duration</th><th scope="col">Rolling 10 perfect</th></tr></thead>
+          <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Attempted</th><th scope="col">Accuracy</th><th scope="col">Duration</th></tr></thead>
           <tbody>{progress.points.map(point => <tr key={point.id} className={point.perfect ? undefined : 'progress-muted'}>
             <td><AttemptTime completedAt={point.completedAt} /></td>
             <td>{point.status === 'complete' ? 'Complete' : 'Partial'}</td><td>{point.attempted} / {point.total}</td>
             <td>{Number(point.accuracy.toFixed(1))}%</td><td>{formatDuration(point.seconds)}</td>
-            <td>{point.averageSeconds === null ? '—' : `${formatDuration(point.averageSeconds)} (${point.averageCount}/10)`}</td>
           </tr>)}</tbody>
         </table>
       </div>
