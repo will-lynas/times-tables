@@ -54,7 +54,9 @@ h2 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -.2px; }
 .score-heading span { font-size: 13px; color: var(--gray-11); }
 .score-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; text-align: right; }
 .score-table th { color: var(--gray-11); font-weight: 500; }
-.score-table tr[data-perfect="false"] { color: var(--gray-11); }
+.score-table tr[data-perfect="true"] { color: var(--green-11); }
+.score-table tr[data-status="partial"] { color: var(--gray-12); }
+.score-table tr[data-status="complete"][data-perfect="false"] { color: var(--red-11); }
 .score-table td, .score-table th { padding: 6px 0; border-bottom: 1px solid var(--gray-6); }
 .score-table td:first-child, .score-table th:first-child { text-align: left; }
 .scores .storage-note { font-size: 12px; margin-top: 12px; }

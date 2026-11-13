@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 for (const palette of ['dark', 'light'] as const) {
-  test(`only truly perfect completed rows retain primary emphasis in ${palette}`, async ({ page }, info) => {
+  test(`history uses readable green perfect, grey partial and red inaccurate rows in ${palette}`, async ({ page }, info) => {
     await page.addInitScript(palette => {
       if (localStorage.getItem('times-tables.scores')) return
       localStorage.setItem('times-tables.theme', palette)
@@ -28,7 +28,7 @@ for (const palette of ['dark', 'light'] as const) {
       await expect(rows.nth(index)).toHaveAttribute('data-perfect', String(index >= 3))
     }
     await expect(page.getByRole('heading', { name: 'Partial results', exact: true })).toHaveCount(0)
-    await expect(page.locator('.score-table')).toHaveCount(1)
+    await expect(complete).toHaveCount(1)
     const contrast = await complete.evaluate(table => {
       const theme = table.closest('.radix-themes')!
       const probe = document.createElement('span')
@@ -37,8 +37,9 @@ for (const palette of ['dark', 'light'] as const) {
         probe.style.color = `var(${name})`
         return getComputedStyle(probe).color
       }
-      const primary = token('--gray-12')
-      const muted = token('--gray-11')
+      const neutral = token('--gray-12')
+      const perfect = token('--green-11')
+      const inaccurate = token('--red-11')
       const background = token('--color-background')
       probe.remove()
       const luminance = (color: string) => {
@@ -49,17 +50,20 @@ for (const palette of ['dark', 'light'] as const) {
         return .2126 * r + .7152 * g + .0722 * b
       }
       const bg = luminance(background)
-      return { primary, muted, rows: Array.from(table.querySelectorAll('tbody tr')).map(row => {
+      return { neutral, perfect, inaccurate, rows: Array.from(table.querySelectorAll('tbody tr')).map(row => {
         const colors = Array.from(row.querySelectorAll('td')).map(cell => getComputedStyle(cell).color)
-        return { colors, ratios: colors.map(color => {
+        const opacity = [row, ...Array.from(row.querySelectorAll('td'))].map(element => getComputedStyle(element).opacity)
+        return { colors, opacity, ratios: colors.map(color => {
           const fg = luminance(color)
           return (Math.max(fg, bg) + .05) / (Math.min(fg, bg) + .05)
         }) }
       }) }
     })
-    expect(contrast.muted).not.toBe(contrast.primary)
+    expect(new Set([contrast.neutral, contrast.perfect, contrast.inaccurate]).size).toBe(3)
     for (const [index, row] of contrast.rows.entries()) {
-      expect(row.colors.every(color => color === (index < 3 ? contrast.muted : contrast.primary))).toBe(true)
+      const expected = index === 0 ? contrast.neutral : index < 3 ? contrast.inaccurate : contrast.perfect
+      expect(row.colors, `row ${index}`).toEqual(Array(7).fill(expected))
+      expect(row.opacity.every(opacity => opacity === '1')).toBe(true)
       expect(Math.min(...row.ratios)).toBeGreaterThanOrEqual(4.5)
     }
     const partial = rows.filter({ has: page.getByRole('cell', { name: 'Partial', exact: true }) })

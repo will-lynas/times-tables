@@ -247,7 +247,7 @@ export default function App() {
         </div>
         {visibleScores.length === 0 ? <p>{history.scores.length > 0 ? 'No rounds match these filters.' : 'No rounds yet.'}</p> : <table className="score-table" aria-label="Score history">
           <thead><tr><th>Status</th><th>Order</th><th>Size</th><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
-          <tbody>{visibleScores.map(score => <tr key={score.id} data-perfect={score.status === 'complete' && score.correct === score.total}><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{score.size} × {score.size}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
+          <tbody>{visibleScores.map(score => <tr key={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{score.size} × {score.size}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>}
       </section>
     </main>
