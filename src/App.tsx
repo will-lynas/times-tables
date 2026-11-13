@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Button, SegmentedControl } from '@radix-ui/themes'
+import { Button, SegmentedControl, Theme } from '@radix-ui/themes'
 import { createGrid, scoreAnswers, type Grid, type Mode } from './game'
 import { loadScores, saveScores, rankScores, type Score } from './scores'
 
@@ -9,6 +9,24 @@ function formatTime(ms: number) {
 }
 
 export default function App() {
+  const [appearance, setAppearance] = useState<'dark' | 'light'>(() => {
+    try {
+      return localStorage.getItem('times-tables.theme') === 'light' ? 'light' : 'dark'
+    } catch {
+      return 'dark'
+    }
+  })
+
+  function toggleTheme() {
+    const next = appearance === 'dark' ? 'light' : 'dark'
+    setAppearance(next)
+    try {
+      localStorage.setItem('times-tables.theme', next)
+    } catch {
+      // Keep the choice for this page when browser storage is unavailable.
+    }
+  }
+
   const [mode, setMode] = useState<Mode>('shuffled')
   const [grid, setGrid] = useState<Grid | null>(null)
   const [startedAt, setStartedAt] = useState<number | null>(null)
@@ -65,12 +83,12 @@ export default function App() {
     }
   }
 
-  return <>
+  return <Theme appearance={appearance} accentColor="blue" grayColor="slate" radius="medium">
     <div className="small-screen"><h1>Times tables</h1><p>Bring a keyboard and a wider screen.</p><p>This practice grid needs a desktop window at least 1024 pixels wide.</p></div>
     <main className="practice">
       <header className="page-header">
         <div><h1>Times tables<span className="title-mark" aria-hidden="true"> ×</span></h1><p>One grid. A little faster each time.</p></div>
-        <span className="scope">1–12 / 144 answers</span>
+        <div className="header-actions"><span className="scope">1–12 / 144 answers</span><Button variant="soft" onClick={toggleTheme}>Switch to {appearance === 'dark' ? 'light' : 'dark'} mode</Button></div>
       </header>
       <section className="toolbar" aria-label="Round controls">
         <SegmentedControl.Root aria-label="Table order" value={mode} onValueChange={value => setMode(value as Mode)} disabled={grid !== null}>
@@ -118,5 +136,5 @@ export default function App() {
         <p className="storage-note">Best five per mode. Accuracy first, then time. Scores stay in this browser only.</p>
       </section>
     </main>
-  </>
+  </Theme>
 }
