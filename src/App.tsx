@@ -55,6 +55,29 @@ export default function App() {
     setStartedAt(performance.now())
   }
 
+  function resetRound() {
+    setStartedAt(null)
+    setElapsed(0)
+    setGrid(null)
+    setAnswers(Array(144).fill(''))
+    setResult(null)
+  }
+
+  useEffect(() => {
+    if (grid !== null) return
+    function handleStartKey(event: globalThis.KeyboardEvent) {
+      if (event.key !== 'Enter' && event.key !== ' ') return
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing || event.defaultPrevented) return
+      if (event.target instanceof Element && event.target.closest('button, a[href], input, textarea, select, summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="combobox"], [tabindex]')) return
+      const popups = document.querySelectorAll('dialog[open], :popover-open, [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')
+      if (Array.from(popups).some(popup => popup.getClientRects().length > 0 && getComputedStyle(popup).visibility !== 'hidden')) return
+      event.preventDefault()
+      start()
+    }
+    window.addEventListener('keydown', handleStartKey)
+    return () => window.removeEventListener('keydown', handleStartKey)
+  }, [grid, mode])
+
   function finish() {
     if (!running || !grid || filled !== 144) return
     const elapsedMs = performance.now() - startedAt
@@ -72,6 +95,7 @@ export default function App() {
     const column = index % 12
     const target = {
       Enter: Math.min(index + 1, 143),
+      ' ': Math.min(index + 1, 143),
       ArrowRight: column < 11 ? index + 1 : index,
       ArrowLeft: column > 0 ? index - 1 : index,
       ArrowDown: index < 132 ? index + 12 : index,
@@ -107,13 +131,15 @@ export default function App() {
           <SegmentedControl.Item value="shuffled">Shuffled</SegmentedControl.Item>
         </SegmentedControl.Root>
         <div className="stats"><span>{filled} / 144 filled</span><span role="timer" aria-label="Elapsed time">{formatTime(elapsed)}</span></div>
-        {grid === null && <Button onClick={start}>Start</Button>}
+        {running && <Button variant="soft" color="gray" onClick={resetRound}>Cancel</Button>}
+        {result && <Button onClick={resetRound}>New round</Button>}
       </section>
       {history.warning && <p className="storage-warning" role="alert">{history.warning}</p>}
       {result && <section className="result-summary" aria-label="Round result" aria-live="polite">
         <h2>Round complete</h2><span>{result.correct} / 144 correct</span><span>{Number(result.accuracy.toFixed(1))}% accuracy</span>
         {!history.warning && <span className="save-status">Score saved in this browser.</span>}
       </section>}
+      <div className="grid-stage">
       <table className="answer-grid" aria-label="Multiplication grid">
         <thead><tr><th scope="col" aria-label="Multiply">×</th>{(grid?.columns ?? placeholders).map((column, index) => <th scope="col" key={index}>{column ?? '·'}</th>)}</tr></thead>
         <tbody>{(grid?.rows ?? placeholders).map((row, rowIndex) => <tr key={rowIndex}>
@@ -134,8 +160,13 @@ export default function App() {
           })}
         </tr>)}</tbody>
       </table>
+      {grid === null && <div className="start-overlay">
+        <Button className="start-button" size="4" onClick={start} aria-describedby="start-hint">Start</Button>
+        <p id="start-hint">Enter or Space to start</p>
+      </div>}
+      </div>
       <div className="grid-footer">
-        <p>{result ? 'Your finished grid stays here for review.' : running ? 'Enter / Tab next · Shift + Tab back · Arrow keys move · Click to edit' : 'The grid is revealed when you start. The timer won’t pause.'}</p>
+        <p>{result ? 'Your finished grid stays here for review.' : running ? 'Enter / Space / Tab next · Shift + Tab back · Arrow keys move · Click to edit' : 'The grid is revealed when you start. The timer won’t pause.'}</p>
         {!result && <Button disabled={!running || filled !== 144} onClick={finish}>Finish</Button>}
       </div>
       <section className="scores" aria-labelledby="scores-heading">
