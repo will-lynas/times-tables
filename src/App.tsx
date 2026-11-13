@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { Button, IconButton, SegmentedControl, Theme } from '@radix-ui/themes'
 import { createGrid, scoreAnswers, type Grid, type Mode } from './game'
 import { loadScores, saveScores, rankScores, type Score } from './scores'
@@ -35,6 +35,7 @@ export default function App() {
   const [result, setResult] = useState<ReturnType<typeof scoreAnswers> | null>(null)
   const [history, setHistory] = useState(loadScores)
   const inputs = useRef<(HTMLInputElement | null)[]>([])
+  const startButton = useRef<HTMLButtonElement>(null)
   const running = startedAt !== null
   const filled = answers.filter(Boolean).length
   const ranked = rankScores(history.scores, mode)
@@ -63,6 +64,10 @@ export default function App() {
     setResult(null)
   }
 
+  useLayoutEffect(() => {
+    if (grid === null) startButton.current?.focus()
+  }, [grid])
+
   useEffect(() => {
     if (grid !== null) return
     function handleStartKey(event: globalThis.KeyboardEvent) {
@@ -77,6 +82,17 @@ export default function App() {
     window.addEventListener('keydown', handleStartKey)
     return () => window.removeEventListener('keydown', handleStartKey)
   }, [grid, mode])
+
+  useEffect(() => {
+    if (!running) return
+    function handleCancelKey(event: globalThis.KeyboardEvent) {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.repeat || event.isComposing || event.altKey || event.ctrlKey || event.metaKey) return
+      event.preventDefault()
+      resetRound()
+    }
+    window.addEventListener('keydown', handleCancelKey)
+    return () => window.removeEventListener('keydown', handleCancelKey)
+  }, [running])
 
   function finish() {
     if (!running || !grid || filled !== 144) return
@@ -161,12 +177,12 @@ export default function App() {
         </tr>)}</tbody>
       </table>
       {grid === null && <div className="start-overlay">
-        <Button className="start-button" size="4" onClick={start} aria-describedby="start-hint">Start</Button>
+        <Button ref={startButton} className="start-button" size="4" onClick={start} aria-describedby="start-hint">Start</Button>
         <p id="start-hint">Enter or Space to start</p>
       </div>}
       </div>
       <div className="grid-footer">
-        <p>{result ? 'Your finished grid stays here for review.' : running ? 'Enter / Space / Tab next · Shift + Tab back · Arrow keys move · Click to edit' : 'The grid is revealed when you start. The timer won’t pause.'}</p>
+        <p>{result ? 'Your finished grid stays here for review.' : running ? 'Enter / Space / Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit' : 'The grid is revealed when you start. The timer won’t pause.'}</p>
         {!result && <Button disabled={!running || filled !== 144} onClick={finish}>Finish</Button>}
       </div>
       <section className="scores" aria-labelledby="scores-heading">
