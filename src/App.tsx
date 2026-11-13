@@ -28,6 +28,7 @@ export default function App() {
   }
 
   const [mode, setMode] = useState<Mode>('shuffled')
+  const [size, setSize] = useState(12)
   const [grid, setGrid] = useState<Grid | null>(null)
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [elapsed, setElapsed] = useState(0)
@@ -38,9 +39,13 @@ export default function App() {
   const startButton = useRef<HTMLButtonElement>(null)
   const running = startedAt !== null
   const filled = answers.filter(Boolean).length
-  const ranked = rankScores(history.scores, mode)
-  const perfect = ranked.find(score => score.correct === 144)
-  const placeholders = Array.from({ length: 12 }, () => null)
+  const ranked = rankScores(history.scores, mode, size)
+  const perfect = ranked.find(score => score.correct === score.total)
+  const scoreHeading = `${mode === 'ordered' ? 'Ordered' : 'Shuffled'} high scores · ${size} × ${size}`
+  const total = size * size
+  const placeholders = Array.from({ length: size }, () => null)
+  const partials = history.scores.filter(score => score.status === 'partial' && score.mode === mode && score.size === size)
+    .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt)).slice(0, 5)
 
   useEffect(() => {
     if (startedAt === null) return
@@ -51,7 +56,7 @@ export default function App() {
 
   function start() {
     if (grid !== null) return
-    setGrid(createGrid(mode))
+    setGrid(createGrid(mode, Math.random, size))
     setElapsed(0)
     setStartedAt(performance.now())
   }
@@ -60,7 +65,7 @@ export default function App() {
     setStartedAt(null)
     setElapsed(0)
     setGrid(null)
-    setAnswers(Array(144).fill(''))
+    setAnswers(Array(size * size).fill(''))
     setResult(null)
   }
 
@@ -81,7 +86,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handleStartKey)
     return () => window.removeEventListener('keydown', handleStartKey)
-  }, [grid, mode])
+  }, [grid, mode, size])
 
   useEffect(() => {
     if (!running) return
@@ -92,13 +97,17 @@ export default function App() {
     }
     window.addEventListener('keydown', handleCancelKey)
     return () => window.removeEventListener('keydown', handleCancelKey)
-  }, [running])
+  }, [running, size])
 
   function finish() {
-    if (!running || !grid || filled !== 144) return
+    if (!running || !grid || filled === 0) return
     const elapsedMs = performance.now() - startedAt
     const completed = scoreAnswers(grid, answers)
-    const score: Score = { id: crypto.randomUUID(), mode, correct: completed.correct, total: 144, elapsedMs, completedAt: new Date().toISOString() }
+    const score: Score = {
+      id: crypto.randomUUID(), mode, status: completed.status, attempted: completed.attempted,
+      size: grid.size, correct: completed.correct, total: completed.total,
+      elapsedMs, completedAt: new Date().toISOString(),
+    }
     const scores = [...history.scores, score]
     setStartedAt(null)
     setElapsed(elapsedMs)
@@ -108,14 +117,14 @@ export default function App() {
 
   function navigate(event: KeyboardEvent<HTMLInputElement>, index: number) {
     if (event.altKey || event.ctrlKey || event.metaKey) return
-    const column = index % 12
+    const column = index % size
     const target = {
-      Enter: Math.min(index + 1, 143),
-      ' ': Math.min(index + 1, 143),
-      ArrowRight: column < 11 ? index + 1 : index,
+      Enter: Math.min(index + 1, total - 1),
+      ' ': Math.min(index + 1, total - 1),
+      ArrowRight: column < size - 1 ? index + 1 : index,
       ArrowLeft: column > 0 ? index - 1 : index,
-      ArrowDown: index < 132 ? index + 12 : index,
-      ArrowUp: index >= 12 ? index - 12 : index,
+      ArrowDown: index < total - size ? index + size : index,
+      ArrowUp: index >= size ? index - size : index,
     }[event.key]
     if (target !== undefined) {
       event.preventDefault()
@@ -129,7 +138,7 @@ export default function App() {
       <header className="page-header">
         <div><h1>Times tables<span className="title-mark" aria-hidden="true"> ×</span></h1><p>One grid. A little faster each time.</p></div>
         <div className="header-actions">
-          <span className="scope">1–12 / 144 answers</span>
+          <span className="scope">1–{size} / {total} answers</span>
           <IconButton variant="ghost" color="gray" radius="full" onClick={toggleTheme}
             aria-label={`Switch to ${appearance === 'dark' ? 'light' : 'dark'} mode`}
             title={`Switch to ${appearance === 'dark' ? 'light' : 'dark'} mode`}>
@@ -146,14 +155,26 @@ export default function App() {
           <SegmentedControl.Item value="ordered">Ordered</SegmentedControl.Item>
           <SegmentedControl.Item value="shuffled">Shuffled</SegmentedControl.Item>
         </SegmentedControl.Root>
-        <div className="stats"><span>{filled} / 144 filled</span><span role="timer" aria-label="Elapsed time">{formatTime(elapsed)}</span></div>
+        <label className="grid-size">Grid size
+          <select value={size} disabled={grid !== null} onChange={event => {
+            const nextSize = Number(event.currentTarget.value)
+            setSize(nextSize)
+            setAnswers(Array(nextSize * nextSize).fill(''))
+          }}>
+            {Array.from({ length: 11 }, (_, index) => index + 2).map(option => <option key={option} value={option}>{option} × {option}</option>)}
+          </select>
+        </label>
+        <div className="stats"><span>{filled} / {total} filled</span><span role="timer" aria-label="Elapsed time">{formatTime(elapsed)}</span></div>
         {running && <Button variant="soft" color="gray" onClick={resetRound}>Cancel</Button>}
         {result && <Button onClick={resetRound}>New round</Button>}
       </section>
       {history.warning && <p className="storage-warning" role="alert">{history.warning}</p>}
       {result && <section className="result-summary" aria-label="Round result" aria-live="polite">
-        <h2>Round complete</h2><span>{result.correct} / 144 correct</span><span>{Number(result.accuracy.toFixed(1))}% accuracy</span>
-        {!history.warning && <span className="save-status">Score saved in this browser.</span>}
+        <h2>{result.status === 'partial' ? 'Partial result' : 'Round complete'}</h2>
+        {result.status === 'partial' && <span>{result.attempted} / {result.total} attempted</span>}
+        <span>{result.correct} / {result.attempted} correct</span><span>{Number(result.accuracy.toFixed(1))}% accuracy</span>
+        {result.status === 'partial' && <span>{result.total - result.attempted} unanswered cells are not graded.</span>}
+        {!history.warning && <span className="save-status">{result.status === 'partial' ? 'Partial result' : 'Score'} saved in this browser.</span>}
       </section>}
       <div className="grid-stage">
       <table className="answer-grid" aria-label="Multiplication grid">
@@ -161,10 +182,13 @@ export default function App() {
         <tbody>{(grid?.rows ?? placeholders).map((row, rowIndex) => <tr key={rowIndex}>
           <th scope="row">{row ?? '·'}</th>
           {(grid?.columns ?? placeholders).map((column, columnIndex) => {
-            const index = rowIndex * 12 + columnIndex
-            return <td key={columnIndex}><input
+            const index = rowIndex * size + columnIndex
+            const match = result?.matches[index]
+            const feedbackId = `answer-feedback-${index}`
+            return <td key={columnIndex} data-result={match === true ? 'correct' : match === false ? 'incorrect' : undefined}><input
               ref={element => { inputs.current[index] = element }}
               aria-label={row && column ? `${row} × ${column}` : `Row ${rowIndex + 1}, column ${columnIndex + 1}`}
+              aria-describedby={typeof match === 'boolean' ? feedbackId : undefined}
               type="text" inputMode="numeric" autoComplete="off" disabled={grid === null} readOnly={result !== null} maxLength={3}
               value={answers[index]} onFocus={event => event.currentTarget.select()}
               onChange={event => {
@@ -172,7 +196,10 @@ export default function App() {
                 if (running && /^\d{0,3}$/.test(value)) setAnswers(current => current.map((answer, cell) => cell === index ? value : answer))
               }}
               onKeyDown={event => navigate(event, index)}
-            /></td>
+            />
+              {match === true && <span id={feedbackId} className="visually-hidden">Correct.</span>}
+              {match === false && <span id={feedbackId} className="answer-correction"><span className="visually-hidden">Incorrect. </span>Correct: {grid?.products[index]}</span>}
+            </td>
           })}
         </tr>)}</tbody>
       </table>
@@ -183,16 +210,24 @@ export default function App() {
       </div>
       <div className="grid-footer">
         <p>{result ? 'Your finished grid stays here for review.' : running ? 'Enter / Space / Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit' : 'The grid is revealed when you start. The timer won’t pause.'}</p>
-        {!result && <Button disabled={!running || filled !== 144} onClick={finish}>Finish</Button>}
+        {!result && <Button disabled={!running || filled === 0} onClick={finish}>{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
       </div>
       <section className="scores" aria-labelledby="scores-heading">
-        <div className="score-heading"><h2 id="scores-heading">{mode === 'ordered' ? 'Ordered' : 'Shuffled'} high scores</h2><span>{perfect ? `Fastest perfect: ${formatTime(perfect.elapsedMs)}` : 'No perfect round yet'}</span></div>
-        {ranked.length === 0 ? <p>Finish a round to set your first score.</p> : <table className="score-table" aria-label={`${mode === 'ordered' ? 'Ordered' : 'Shuffled'} high scores`}>
+        <div className="score-heading"><h2 id="scores-heading">{scoreHeading}</h2><span>{perfect ? `Fastest perfect: ${formatTime(perfect.elapsedMs)}` : 'No perfect round yet'}</span></div>
+        {ranked.length === 0 ? <p>Finish a full grid to set your first high score.</p> : <table className="score-table" aria-label={scoreHeading}>
           <thead><tr><th>Rank</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
-          <tbody>{ranked.slice(0, 5).map((score, index) => <tr key={score.id}><td>{index + 1}</td><td>{score.correct} / 144</td><td>{Number((score.correct / 144 * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
+          <tbody>{ranked.slice(0, 5).map((score, index) => <tr key={score.id}><td>{index + 1}</td><td>{score.correct} / {score.total}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>}
-        <p className="storage-note">Best five per mode. Accuracy first, then time. Scores stay in this browser only.</p>
+        <p className="storage-note">Best five complete rounds per mode and size. Accuracy first, then time. Scores stay in this browser only.</p>
       </section>
+      {partials.length > 0 && <section className="scores" aria-labelledby="partials-heading">
+        <h2 id="partials-heading">Recent partial results</h2>
+        <table className="score-table" aria-label="Recent partial results">
+          <thead><tr><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
+          <tbody>{partials.map(score => <tr key={score.id}><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
+        </table>
+        <p className="storage-note">Latest five for this mode and size. Partial results never count toward high scores or personal bests.</p>
+      </section>}
     </main>
   </Theme>
 }

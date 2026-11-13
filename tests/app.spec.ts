@@ -65,7 +65,7 @@ test('supports numeric editing and keyboard navigation without submitting', asyn
   await cells.nth(11).press('ArrowRight')
   await expect(cells.nth(11)).toBeFocused()
   await cells.nth(143).fill('144')
-  await expect(page.getByRole('button', { name: 'Finish', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Finish early', exact: true })).toBeEnabled()
 })
 
 test('starts a hidden shuffled grid only on request and runs an unpausable timer', async ({ page }) => {
