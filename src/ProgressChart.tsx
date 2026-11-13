@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CartesianGrid, Legend, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
+import { Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { buildProgress, formatDuration, progressTimeDomain, type ProgressPoint, type ProgressSelection } from './progress'
 import { loadProgressSelection, saveProgressSelection } from './progressSettings'
 import type { Score } from './scores'
@@ -14,8 +14,6 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
   const perfect = progress.points.filter(point => point.perfect)
   const other = progress.points.filter(point => !point.perfect)
   const domain = progressTimeDomain(progress.points)
-  const shortRange = domain[1] - domain[0] <= 86400000
-  const tickDate = new Intl.DateTimeFormat(undefined, shortRange ? { hour: 'numeric', minute: '2-digit' } : { month: 'short', day: 'numeric', year: '2-digit' })
   const settingLabel = `${selection.mode === 'ordered' ? 'Ordered' : 'Shuffled'} · ${selection.size} × ${selection.size}`
 
   function choose(change: Partial<ProgressSelection>) {
@@ -40,11 +38,8 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
       <div className="progress-plot" role="img" aria-label={`Duration by date: ${settingLabel}`} aria-describedby="progress-method">
         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
           <ScatterChart margin={{ top: 12, right: 12, bottom: 4, left: 0 }} accessibilityLayer>
-            <CartesianGrid vertical={false} stroke="var(--gray-4)" />
-            <XAxis type="number" dataKey="timestamp" scale="time" domain={domain} tickFormatter={value => tickDate.format(value)} tickCount={6}
-              tickLine={false} axisLine={false} minTickGap={45} padding={{ left: 12, right: 12 }} tick={{ fill: 'var(--gray-11)', fontSize: 11 }} />
-            <YAxis type="number" dataKey="seconds" name="Duration" domain={[0, 'auto']} tickFormatter={formatDuration} width={64} tickCount={4}
-              tickLine={false} axisLine={false} padding={{ top: 8, bottom: 8 }} tick={{ fill: 'var(--gray-11)', fontSize: 11 }} />
+            <XAxis hide type="number" dataKey="timestamp" scale="time" domain={domain} tickCount={6} padding={{ left: 12, right: 12 }} />
+            <YAxis hide type="number" dataKey="seconds" name="Duration" domain={[0, 'auto']} tickCount={4} padding={{ top: 8, bottom: 8 }} />
             <ZAxis range={[44, 44]} />
             <Tooltip cursor={false} isAnimationActive={false} content={({ active, payload }) => {
               const point: ProgressPoint | undefined = payload?.[0]?.payload
@@ -56,7 +51,6 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
                 {point.perfect && <span>Rolling average {formatDuration(point.averageSeconds!)} ({point.averageCount}/10)</span>}
               </div>
             }} />
-            <Legend verticalAlign="bottom" align="right" height={28} iconSize={8} wrapperStyle={{ fontSize: 11, pointerEvents: 'none' }} />
             <Line className="progress-average" data={perfect} dataKey="averageSeconds" name="Average (10 perfect)" type="linear"
               stroke="var(--accent-11)" strokeWidth={1.75} dot={false} activeDot={false} isAnimationActive={false} />
             <Scatter className="progress-other" name="Partial / inaccurate" data={other} fill="var(--gray-11)" fillOpacity={0.4} isAnimationActive={false} />
@@ -65,8 +59,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
         </ResponsiveContainer>
       </div>
       <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The blue line is the trailing average of up to 10 perfect complete rounds for this exact order and size, using fewer rounds during warm-up. Lines connect calculated averages, not continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
-      <details className="progress-data">
-        <summary>Data table</summary>
+      <div className="progress-data">
         <table className="score-table" aria-label="Progress data">
           <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Attempted</th><th scope="col">Accuracy</th><th scope="col">Duration</th><th scope="col">Rolling 10 perfect</th></tr></thead>
           <tbody>{progress.points.map(point => <tr key={point.id} className={point.perfect ? undefined : 'progress-muted'}>
@@ -76,7 +69,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
             <td>{point.averageSeconds === null ? '—' : `${formatDuration(point.averageSeconds)} (${point.averageCount}/10)`}</td>
           </tr>)}</tbody>
         </table>
-      </details>
+      </div>
     </>}
   </section>
 }

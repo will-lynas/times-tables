@@ -176,9 +176,8 @@ export default function App() {
   return <Theme appearance={appearance} accentColor="blue" grayColor="slate" radius="medium">
     <div className="small-screen"><h1>Times tables</h1><p>Bring a keyboard and a wider screen.</p><p>This practice grid needs a desktop window at least 1024 pixels wide.</p></div>
     <main className="practice">
+      <h1 className="visually-hidden">Times tables</h1>
       <header className="page-header">
-        <div><h1>Times tables<span className="title-mark" aria-hidden="true"> ×</span></h1></div>
-        <div className="header-actions">
           <nav className="page-nav" aria-label="Main">
             <a href="/" aria-current={page === 'practice' ? 'page' : undefined} onClick={event => changePage(event, 'practice')}>Practice</a>
             <a href="/progress" aria-current={page === 'progress' ? 'page' : undefined} onClick={event => changePage(event, 'progress')}>Progress</a>
@@ -192,7 +191,6 @@ export default function App() {
                 : <path d="M20.9 13a9 9 0 0 1-9.9-9.9A9 9 0 1 0 20.9 13Z" />}
             </svg>
           </IconButton>
-        </div>
       </header>
       <div className="practice-page" hidden={page !== 'practice'}>
       <section className="toolbar" aria-label="Round controls">

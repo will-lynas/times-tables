@@ -61,9 +61,8 @@ test('attempt dates are relative for a week, then local; exact dates are accessi
   await page.getByRole('link', { name: 'Progress', exact: true }).click()
   await expect.poll(async () => {
     await page.clock.runFor(100)
-    return page.getByText('Data table', { exact: true }).count()
+    return page.getByRole('table', { name: 'Progress data' }).count()
   }).toBe(1)
-  await page.getByText('Data table', { exact: true }).click()
   const graphTimes = page.getByRole('table', { name: 'Progress data' }).locator('time')
   await expect(graphTimes).toHaveCount(6)
   await expect(graphTimes.last()).toHaveText('in 5 mins')

@@ -93,7 +93,7 @@ test('supports numeric editing and keyboard navigation without submitting', asyn
 
 test('starts a hidden shuffled grid only on request and runs an unpausable timer', async ({ page }) => {
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: 'Times tables', exact: true })).toBeVisible()
+  await expect(page).toHaveTitle('Times tables')
   await expect(page.getByRole('radio', { name: 'Shuffled', exact: true })).toBeChecked()
   await expect(page.getByRole('textbox')).toHaveCount(144)
   await expect(page.getByRole('textbox').first()).toBeDisabled()
@@ -106,6 +106,6 @@ test('starts a hidden shuffled grid only on request and runs an unpausable timer
   await expect(page.getByRole('columnheader').filter({ hasText: /^\d+$/ })).toHaveCount(12)
   await expect(page.getByRole('timer')).not.toHaveText('0:00.0')
   const elapsed = await page.getByRole('timer').innerText()
-  await page.getByRole('heading', { name: 'Times tables', exact: true }).click()
+  await page.locator('body').click({ position: { x: 8, y: 8 } })
   await expect(page.getByRole('timer')).not.toHaveText(elapsed)
 })

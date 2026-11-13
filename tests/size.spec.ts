@@ -133,7 +133,7 @@ test('offers every grid size from 2 to 12, defaulting to 12 with hidden factors'
     await expect(page.getByRole('textbox').last()).toHaveAccessibleName(`Row ${size}, column ${size}`)
     await expect(page.getByRole('textbox').first()).toBeDisabled()
     await expect(page.getByRole('table', { name: 'Multiplication grid' }).getByRole('row')).toHaveCount(size + 1)
-    await expect(page.getByText(`1–${size} / ${size * size} answers`, { exact: true })).toBeVisible()
+    await expect(selector).toHaveText(`${size} × ${size}`)
     await expect(page.getByText(`0 / ${size * size} filled`, { exact: true })).toBeVisible()
     await expect(page.getByRole('columnheader').filter({ hasText: /^\d+$/ })).toHaveCount(0)
     await expect(page.getByRole('timer')).toHaveText('0:00.0')

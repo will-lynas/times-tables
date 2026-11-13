@@ -40,6 +40,5 @@ test('switching pages preserves an active round and scopes keyboard shortcuts', 
   await page.getByRole('button', { name: 'Finish early', exact: true }).click()
   await page.getByRole('link', { name: 'Progress', exact: true }).click()
   await expect(page.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(1)
-  await page.getByText('Data table', { exact: true }).click()
   await expect(page.getByRole('table', { name: 'Progress data' })).toContainText('Partial')
 })

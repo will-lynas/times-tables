@@ -12,7 +12,7 @@ test('supports Tab and outside dismissal, then stays locked until the round rese
   await expect(panel.getByRole('button', { name: '11 × 11', exact: true })).toBeFocused()
   await page.keyboard.press('Tab')
   await expect(panel.getByRole('button', { name: '12 × 12', exact: true })).toBeFocused()
-  await page.getByRole('heading', { name: 'Times tables', exact: true }).click()
+  await page.locator('body').click({ position: { x: 8, y: 8 } })
   await expect(panel).toHaveCount(0)
   await expect(trigger).toHaveText('12 × 12')
   await chooseGridSize(page, 2)

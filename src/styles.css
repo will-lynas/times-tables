@@ -2,13 +2,11 @@
 :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-synthesis: none; }
 body { margin: 0; }
 .radix-themes { --default-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --color-background: var(--gray-1); color: var(--gray-12); min-height: 100vh; font-variant-numeric: tabular-nums; }
-.practice { max-width: 1040px; width: calc(100% - 96px); margin: 0 auto; padding: 40px 0; }
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+.practice { max-width: 1040px; width: calc(100% - 96px); margin: 0 auto; padding: 24px 0; }
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 h1 { margin: 0; font-size: 27px; font-weight: 650; letter-spacing: -1px; }
-.title-mark { color: var(--accent-9); }
 p { margin: 6px 0 0; color: var(--gray-11); font-size: 14px; line-height: 1.5; }
 .scope { color: var(--gray-11); font-size: 13px; }
-.header-actions { display: flex; align-items: center; gap: 20px; }
 .page-nav { display: flex; align-items: center; gap: 24px; font-size: 13px; }
 .page-nav a { color: var(--gray-11); text-decoration: none; padding: 8px 0; }
 .page-nav a:hover, .page-nav a[aria-current="page"] { color: var(--gray-12); }
