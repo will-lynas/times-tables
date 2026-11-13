@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { chooseGridSize, showStats } from './helpers'
+import { chooseFilter, chooseGridSize, showStats } from './helpers'
 
 const example = [7, 8, 9, 11, 13]
 test('history, PB and graph distinguish same-cardinality factor sets, including partial and inaccurate points', async ({ page }) => {
@@ -19,17 +19,17 @@ test('history, PB and graph distinguish same-cardinality factor sets, including 
   })
   await page.goto('/')
   await showStats(page)
-  await expect(page.getByText('Fastest perfect: 0:04.0', { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   const history = page.getByRole('table', { name: 'Score history', exact: true })
   await expect(history.getByRole('row')).toHaveCount(6)
   await expect(history).toContainText('{1, 3, 5, 7, 9}')
   const filter = page.getByRole('combobox', { name: 'Score size', exact: true })
-  await filter.selectOption({ label: '{7, 8, 9, 11, 13}' })
+  await chooseFilter(filter, { label: '{7, 8, 9, 11, 13}' })
   await expect(history.getByRole('row')).toHaveCount(5)
   await expect(history).not.toContainText('{1, 3, 5, 7, 9}')
-  await filter.selectOption({ label: '{1, 3, 5, 7, 9}' })
+  await chooseFilter(filter, { label: '{1, 3, 5, 7, 9}' })
   await expect(history.getByRole('row')).toHaveCount(2)
-  await expect(page.getByText('Fastest perfect: 0:04.0', { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
   await expect(graph.locator('.progress-perfect .recharts-scatter-symbol')).toHaveCount(2)
   await expect(graph.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(2)
@@ -40,16 +40,16 @@ test('history, PB and graph distinguish same-cardinality factor sets, including 
   expect([...rawLine!.matchAll(/[ML]/g)]).toHaveLength(4)
   await expect(data.getByRole('row')).toHaveCount(5)
   const graphFilter = graph.getByRole('combobox', { name: 'Progress size', exact: true })
-  await graphFilter.selectOption({ label: '{1, 3, 5, 7, 9}' })
+  await chooseFilter(graphFilter, { label: '{1, 3, 5, 7, 9}' })
   await expect(graph.locator('.progress-perfect .recharts-scatter-symbol')).toHaveCount(1)
   await expect(graph.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(0)
   await graph.locator('.progress-perfect .recharts-scatter-symbol').hover()
   await expect(graph.locator('.progress-tooltip dd')).toHaveText(['100%', '25 / 25', '1s'])
   await expect(graph.locator('.progress-results .recharts-line-curve')).toHaveCount(0)
   await page.reload()
-  await expect(graphFilter).toHaveValue('set:1,3,5,7,9')
-  await expect(filter).toHaveValue('set:1,3,5,7,9')
-  await expect(page.getByText('Fastest perfect: 0:04.0', { exact: true })).toBeVisible()
+  await expect(graphFilter).toHaveAttribute('data-value', 'set:1,3,5,7,9')
+  await expect(filter).toHaveAttribute('data-value', 'set:1,3,5,7,9')
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
 })
 
 for (const appearance of ['dark', 'light'] as const) {

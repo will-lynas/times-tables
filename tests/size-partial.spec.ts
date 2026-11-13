@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { chooseGridSize, showPractice, showStats } from './helpers'
+import { chooseFilter, chooseGridSize, showPractice, showStats } from './helpers'
 
 test('small partial rounds retain keyboard controls and size-specific records after reset and Escape', async ({ page }) => {
   await page.goto('/')
@@ -94,14 +94,14 @@ test('saves a small early finish separately from migrated complete scores across
   const full = page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row').filter({ has: page.getByRole('cell', { name: 'Complete', exact: true }) })
   await expect(full).toHaveCount(1)
   await expect(full).toContainText('4 / 4')
-  await expect(page.getByText('Fastest perfect: 0:01.0', { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   await showPractice(page)
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
   await showStats(page)
   await expect(full).toHaveCount(1)
-  await expect(page.getByText('No perfect round yet', { exact: true })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Score order' }).selectOption('shuffled')
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
+  await chooseFilter(page.getByRole('combobox', { name: 'Score order' }), 'shuffled')
   await expect(partials).toHaveCount(0)
   await expect(full).toHaveCount(0)
-  await expect(page.getByText('No perfect round yet', { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
 })

@@ -4,7 +4,8 @@ import { buildProgress, formatDuration, progressTimeDomain, type ProgressPoint, 
 import { loadProgressSelection, saveProgressSelection } from './progressSettings'
 import { scoreFactors, type Score } from './scores'
 import { factorOption, factorsFromOption, presetFactors, settingLabel as labelFactors } from './factors'
-import { FactorSetOptions } from './FactorSetOptions'
+import { factorSetOptions } from './FactorSetOptions'
+import { StyledSelect } from './StyledSelect'
 import { AttemptTime } from './AttemptTime'
 import './progress.css'
 
@@ -29,15 +30,12 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
     <div className="progress-heading">
       <h2 id="progress-heading">Progress</h2>
       <div className="progress-controls" role="group" aria-label="Progress settings">
-        <label className="grid-size"><span className="visually-hidden">Progress order</span><select value={selection.mode} onChange={event => choose({ mode: event.currentTarget.value as ProgressSelection['mode'] })}>
-          <option value="ordered">Ordered</option><option value="shuffled">Shuffled</option>
-        </select></label>
-        <label className="grid-size"><span className="visually-hidden">Progress size</span><select value={factorOption(factors)} onChange={event => {
-          const values = factorsFromOption(event.currentTarget.value)
+        <StyledSelect label="Progress order" value={selection.mode} onChange={value => choose({ mode: value as ProgressSelection['mode'] })}
+          options={[{ value: 'ordered', label: 'Ordered' }, { value: 'shuffled', label: 'Shuffled' }]} />
+        <StyledSelect label="Progress size" sizes value={factorOption(factors)} onChange={value => {
+          const values = factorsFromOption(value)
           choose({ size: values.length, factors: values })
-        }}>
-          <FactorSetOptions sets={[...scores.map(scoreFactors), factors, initialSelection.factors ?? presetFactors(initialSelection.size)]} />
-        </select></label>
+        }} options={factorSetOptions([...scores.map(scoreFactors), factors, initialSelection.factors ?? presetFactors(initialSelection.size)])} />
       </div>
     </div>
     {selection.warning && <p className="storage-warning" role="alert">{selection.warning}</p>}

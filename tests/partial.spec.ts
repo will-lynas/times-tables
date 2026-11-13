@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { showPractice, showStats } from './helpers'
+import { chooseFilter, showPractice, showStats } from './helpers'
 
 async function startOrdered(page: Page) {
   await page.goto('/')
@@ -22,14 +22,14 @@ test('keeps partial status distinct within chronological history after reload', 
   await expect(partials).toContainText('1 / 1')
   await expect(partials).toContainText('100%')
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(3)
-  await expect(page.getByText('Fastest perfect: 0:01.0', { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   await page.reload()
   await showPractice(page)
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
   await showStats(page)
   await expect(partials).toHaveCount(1)
   await expect(partials).toContainText('1 / 144')
-  await expect(page.getByText('Fastest perfect: 0:01.0', { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!))
   expect(saved.version).toBe(4)
   expect(saved.scores).toHaveLength(2)
@@ -39,7 +39,7 @@ test('keeps partial status distinct within chronological history after reload', 
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
   await showStats(page)
   await expect(partials).toHaveCount(1)
-  await page.getByRole('combobox', { name: 'Score order' }).selectOption('shuffled')
+  await chooseFilter(page.getByRole('combobox', { name: 'Score order' }), 'shuffled')
   await expect(partials).toHaveCount(0)
 })
 
@@ -126,7 +126,7 @@ test('finishes early only after an attempt and freezes an honestly labelled part
   expect(saved.scores).toHaveLength(1)
   expect(saved.scores[0]).toMatchObject({ status: 'partial', attempted: 2, correct: 1, size: 12, total: 144, mode: 'ordered' })
   await showStats(page)
-  await expect(page.getByText('No perfect round yet', { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(2)
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('cell', { name: 'Partial', exact: true })).toBeVisible()
 })

@@ -1,3 +1,4 @@
+import { chooseFilter } from './helpers'
 import { expect, test } from '@playwright/test'
 
 for (const palette of ['dark', 'light'] as const) {
@@ -69,24 +70,24 @@ for (const palette of ['dark', 'light'] as const) {
     const partial = rows.filter({ has: page.getByRole('cell', { name: 'Partial', exact: true }) })
     await expect(partial).toContainText('100%')
     await expect(partial).toHaveAttribute('data-perfect', 'false')
-    await expect(page.locator('.score-heading')).toContainText('Fastest perfect: 0:12.0')
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
     await page.screenshot({ path: info.outputPath('mixed-history.png'), fullPage: true })
-    await page.getByRole('combobox', { name: 'Score order', exact: true }).selectOption('shuffled')
+    await chooseFilter(page.getByRole('combobox', { name: 'Score order', exact: true }), 'shuffled')
     await expect(rows).toHaveCount(1)
     await expect(rows.first()).toContainText('143 / 144')
-    await page.getByRole('combobox', { name: 'Score order', exact: true }).selectOption('all')
-    await page.getByRole('combobox', { name: 'Score size', exact: true }).selectOption('2')
+    await chooseFilter(page.getByRole('combobox', { name: 'Score order', exact: true }), 'all')
+    await chooseFilter(page.getByRole('combobox', { name: 'Score size', exact: true }), '2')
     await expect(rows).toHaveCount(3)
     await expect(rows.first()).toContainText('Partial')
     await expect(rows.nth(1)).toContainText('3 / 4')
     await expect(rows.last()).toContainText('4 / 4')
     const stored = await page.evaluate(() => localStorage.getItem('times-tables.scores'))
     await page.reload()
-    await expect(page.getByRole('combobox', { name: 'Score order', exact: true })).toHaveValue('all')
-    await expect(page.getByRole('combobox', { name: 'Score size', exact: true })).toHaveValue('2')
+    await expect(page.getByRole('combobox', { name: 'Score order', exact: true })).toHaveAttribute('data-value', 'all')
+    await expect(page.getByRole('combobox', { name: 'Score size', exact: true })).toHaveAttribute('data-value', '2')
     await expect(rows).toHaveCount(3)
     await expect(partial).toHaveAttribute('data-perfect', 'false')
-    await expect(page.locator('.score-heading')).toContainText('Fastest perfect: 0:12.0')
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
     expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(stored)
   })
 }

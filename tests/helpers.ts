@@ -1,4 +1,18 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
+
+export async function chooseFilter(trigger: Locator, choice: string | { label: string }) {
+  const page = trigger.page()
+  const label = await trigger.getAttribute('aria-label')
+  await trigger.click()
+  const panel = page.getByRole('listbox', { name: `${label} options`, exact: true })
+  const option = typeof choice === 'string'
+    ? panel.locator(`[role="option"][data-value="${choice}"]`)
+    : panel.getByRole('option', { name: choice.label, exact: true })
+  await option.click()
+  await expect(panel).toHaveCount(0)
+  await expect(trigger).toBeFocused()
+}
+
 
 export async function showStats(page: Page) {
   const link = page.getByRole('link', { name: 'Stats', exact: true })

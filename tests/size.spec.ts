@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { chooseGridSize, showPractice, showStats } from './helpers'
+import { chooseFilter, chooseGridSize, showPractice, showStats } from './helpers'
 
 for (const mode of ['Ordered', 'Shuffled']) {
   for (const size of [2, 7, 12]) {
@@ -103,7 +103,8 @@ test('filters scores independently by size and mode while preserving legacy roun
   await showStats(page)
   await expect(scores.getByText('4 / 4', { exact: true })).toHaveCount(2)
   await expect(scores.getByText('100%', { exact: true })).toBeVisible()
-  await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
+  await expect(scores.getByText(elapsed, { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!))
   expect(saved.version).toBe(4)
   expect(saved.scores).toHaveLength(2)
@@ -115,20 +116,20 @@ test('filters scores independently by size and mode while preserving legacy roun
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('2 × 2')
   await showStats(page)
   await expect(scores.getByRole('row')).toHaveCount(3)
-  await page.getByRole('combobox', { name: 'Score size' }).selectOption('12')
+  await chooseFilter(page.getByRole('combobox', { name: 'Score size' }), '12')
   await expect(scores.getByRole('row')).toHaveCount(2)
   await expect(scores.getByText('143 / 144', { exact: true })).toBeVisible()
-  await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Score size' }).selectOption('2')
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
+  await chooseFilter(page.getByRole('combobox', { name: 'Score size' }), '2')
   await expect(scores.getByRole('row')).toHaveCount(2)
   await expect(scores.getByText('4 / 4', { exact: true })).toHaveCount(2)
-  await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   await showPractice(page)
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
   await showStats(page)
   await expect(scores.getByRole('row')).toHaveCount(2)
-  await expect(page.getByText('No perfect round yet', { exact: true })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Score order' }).selectOption('shuffled')
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
+  await chooseFilter(page.getByRole('combobox', { name: 'Score order' }), 'shuffled')
   await expect(scores).toHaveCount(0)
 })
 

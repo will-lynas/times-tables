@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { chooseGridSize, showPractice, showStats } from './helpers'
+import { chooseFilter, chooseGridSize, showPractice, showStats } from './helpers'
 
 for (const failure of ['getter', 'write'] as const) {
   test(`unavailable storage ${failure} keeps settings playable without falsely claiming a score was saved`, async ({ page }) => {
@@ -62,15 +62,15 @@ test('shows every saved setting after refresh with independent history filters a
   await expect(partials).toContainText('3 × 3')
   const order = page.getByRole('combobox', { name: 'Score order', exact: true })
   const size = page.getByRole('combobox', { name: 'Score size', exact: true })
-  await expect(order).toHaveValue('all')
-  await expect(size).toHaveValue('all')
-  await order.selectOption('ordered')
+  await expect(order).toHaveAttribute('data-value', 'all')
+  await expect(size).toHaveAttribute('data-value', 'all')
+  await chooseFilter(order, 'ordered')
   await expect(full).toHaveCount(8)
   await expect(partials).toHaveCount(0)
-  await size.selectOption('3')
+  await chooseFilter(size, '3')
   await expect(full).toHaveCount(0)
   await expect(page.getByText('No rounds match these filters.', { exact: true })).toBeVisible()
-  await order.selectOption('shuffled')
+  await chooseFilter(order, 'shuffled')
   await expect(full).toHaveCount(1)
   await expect(history.getByRole('row')).toHaveCount(3)
   await expect(partials).toHaveCount(1)
@@ -83,8 +83,8 @@ test('shows every saved setting after refresh with independent history filters a
   await expect(history.getByRole('row')).toHaveCount(3)
   await expect(full).toContainText('Shuffled')
   await page.reload()
-  await expect(order).toHaveValue('shuffled')
-  await expect(size).toHaveValue('3')
+  await expect(order).toHaveAttribute('data-value', 'shuffled')
+  await expect(size).toHaveAttribute('data-value', '3')
   await showPractice(page)
   await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeChecked()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('12 × 12')
@@ -92,8 +92,8 @@ test('shows every saved setting after refresh with independent history filters a
   await showStats(page)
   await expect(full).toHaveCount(1)
   await expect(history.getByRole('row')).toHaveCount(3)
-  await order.selectOption('all')
-  await size.selectOption('all')
+  await chooseFilter(order, 'all')
+  await chooseFilter(size, 'all')
   await expect(history.getByRole('row')).toHaveCount(11)
   await expect(full).toHaveCount(9)
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(raw)

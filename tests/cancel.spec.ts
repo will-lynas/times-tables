@@ -93,7 +93,7 @@ test('new round clears a completed result while preserving its saved score', asy
   await expect(page.getByRole('timer')).toHaveText('0:00.0')
   await showStats(page)
   await expect(scores.getByRole('row')).toHaveCount(2)
-  await expect(page.getByText('Fastest perfect: 0:05.0', { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   expect(await page.evaluate(key => localStorage.getItem(key), SCORE_KEY)).toBe(saved)
 
   await showPractice(page)

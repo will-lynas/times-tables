@@ -2,9 +2,10 @@ import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type Keyb
 import { Button, IconButton, SegmentedControl, Theme } from '@radix-ui/themes'
 import { canonicalFactors, presetFactors, factorOption, settingLabel } from './factors'
 import { createGrid, scoreAnswers, type Grid, type Mode } from './game'
-import { loadScores, saveScores, rankScores, scoreFactors, type Score } from './scores'
+import { loadScores, saveScores, scoreFactors, type Score } from './scores'
 import { loadSettings, saveSettings, type Settings } from './settings'
-import { FactorSetOptions } from './FactorSetOptions'
+import { factorSetOptions } from './FactorSetOptions'
+import { StyledSelect } from './StyledSelect'
 import { GridSizePicker } from './GridSizePicker'
 import { AttemptTime } from './AttemptTime'
 import { StatsSummary } from './StatsSummary'
@@ -91,8 +92,7 @@ export default function App() {
   const finished = useRef(false)
   const running = startedAt !== null
   const filled = answers.filter(Boolean).length
-  const ranked = size > 0 ? rankScores(history.scores, mode, factors) : []
-  const perfect = ranked.find(score => score.correct === score.total)
+
 
   const visibleScores = history.scores.filter(score => (scoreMode === 'all' || score.mode === scoreMode)
     && (settings.scoreFactors ? factorOption(scoreFactors(score)) === settings.scoreFactors : scoreSize === 'all' || factorOption(scoreFactors(score)) === String(scoreSize)))
@@ -294,18 +294,15 @@ export default function App() {
       {page === 'stats' && <div className="stats-page">
       {history.warning && <p className="storage-warning" role="alert">{history.warning}</p>}
         <div className="toolbar" role="group" aria-label="Score filters">
-          <label className="grid-size">Score order <select value={scoreMode} onChange={event => updateSettings({ scoreMode: event.currentTarget.value as Settings['scoreMode'] })}>
-            <option value="all">All orders</option><option value="ordered">Ordered</option><option value="shuffled">Shuffled</option>
-          </select></label>
-          <label className="grid-size">Score size <select value={settings.scoreFactors ?? scoreSize} onChange={event => updateSettings({ scoreSize: 'all', scoreFactors: event.currentTarget.value === 'all' ? undefined : event.currentTarget.value })}>
-            <option value="all">All sizes</option>
-            <FactorSetOptions sets={[...history.scores.map(scoreFactors), ...tracking.starts.map(run => run.factors), factors, customFactors]} />
-          </select></label>
+          <StyledSelect label="Score order" showLabel value={scoreMode} onChange={value => updateSettings({ scoreMode: value as Settings['scoreMode'] })}
+            options={[{ value: 'all', label: 'All orders' }, { value: 'ordered', label: 'Ordered' }, { value: 'shuffled', label: 'Shuffled' }]} />
+          <StyledSelect label="Score size" showLabel sizes value={settings.scoreFactors ?? scoreSize} onChange={value => updateSettings({ scoreSize: 'all', scoreFactors: value === 'all' ? undefined : value })}
+            options={[{ value: 'all', label: 'All sizes' }, ...factorSetOptions([...history.scores.map(scoreFactors), ...tracking.starts.map(run => run.factors), factors, customFactors])]} />
         </div>
       <StatsSummary scores={history.scores} tracking={tracking} mode={scoreMode} selection={settings.scoreFactors ?? String(scoreSize)} unavailable={Boolean(history.warning)} />
       <Suspense fallback={<p role="status">Loading stats…</p>}><ProgressChart scores={history.scores} initialSelection={{ mode, size: size || 12, factors: size ? factors : presetFactors(12) }} /></Suspense>
       <section className="scores" aria-labelledby="scores-heading">
-        <div className="score-heading"><h2 id="scores-heading">Score history</h2><div><span>{mode === 'ordered' ? 'Ordered' : 'Shuffled'} · {size > 0 ? settingLabel(factors) : 'None'} — </span><span>{perfect ? `Fastest perfect: ${formatTime(perfect.elapsedMs)}` : 'No perfect round yet'}</span></div></div>
+        <div className="score-heading"><h2 id="scores-heading">Score history</h2></div>
         {visibleScores.length === 0 ? <p>{history.scores.length > 0 ? 'No rounds match these filters.' : 'No rounds yet.'}</p> : <table className="score-table" aria-label="Score history">
           <thead><tr><th>Date</th><th>Status</th><th>Order</th><th>Factors</th><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
           <tbody>{visibleScores.map(score => <tr key={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td><AttemptTime completedAt={score.completedAt} /></td><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{settingLabel(scoreFactors(score))}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>

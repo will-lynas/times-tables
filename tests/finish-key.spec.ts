@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { SCORE_KEY } from '../src/scores'
-import { chooseGridSize, showPractice, showStats } from './helpers'
+import { chooseFilter, chooseGridSize, showPractice, showStats } from './helpers'
 
 async function startSmall(page: Page) {
   await page.goto('/')
@@ -181,13 +181,16 @@ test('Enter completion keeps history filters independent and persists round sett
   const order = page.getByRole('combobox', { name: 'Score order', exact: true })
   const size = page.getByRole('combobox', { name: 'Score size', exact: true })
   await showStats(page)
-  await order.selectOption('ordered')
-  await size.selectOption('2')
+  await chooseFilter(order, 'ordered')
+  await chooseFilter(size, '2')
   for (const filter of [order, size]) {
-    const prevented = await filter.evaluate(element => !element.dispatchEvent(new KeyboardEvent('keydown', {
-      key: 'Enter', bubbles: true, cancelable: true,
-    })))
-    expect(prevented).toBe(false)
+    const label = await filter.getAttribute('aria-label')
+    await filter.press('Enter')
+    const panel = page.getByRole('listbox', { name: `${label} options`, exact: true })
+    await expect(panel).toBeVisible()
+    await page.keyboard.press('Enter')
+    await expect(panel).toHaveCount(0)
+    await expect(filter).toBeFocused()
   }
   await showPractice(page)
   await expect(page.getByRole('region', { name: 'Round result' })).toHaveCount(0)
@@ -202,12 +205,12 @@ test('Enter completion keeps history filters independent and persists round sett
   await expect(page.getByRole('radio', { name: 'Shuffled', exact: true })).toBeChecked()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('3 × 3')
   await showStats(page)
-  await expect(order).toHaveValue('ordered')
-  await expect(size).toHaveValue('2')
+  await expect(order).toHaveAttribute('data-value', 'ordered')
+  await expect(size).toHaveAttribute('data-value', '2')
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(2)
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row').filter({ has: page.getByRole('cell', { name: 'Partial', exact: true }) })).toHaveCount(0)
-  await order.selectOption('all')
-  await size.selectOption('all')
+  await chooseFilter(order, 'all')
+  await chooseFilter(size, 'all')
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(3)
   expect(await savedScores(page)).toEqual(saved)
 })

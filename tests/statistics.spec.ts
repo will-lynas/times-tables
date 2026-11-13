@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { chooseGridSize, showPractice, showStats } from './helpers'
+import { chooseFilter, chooseGridSize, showPractice, showStats } from './helpers'
 
 const summary = (page: Page) => page.getByRole('region', { name: 'Run statistics' })
 async function values(page: Page, started: string, completed: string, perfect: string) {
@@ -71,10 +71,8 @@ test('legacy starts are a lower bound, scores remain unchanged, exact factor set
   await showStats(page)
   await values(page, '≥2', '2', '100%')
   await expect(summary(page).locator('dd').first()).toHaveAccessibleDescription(/older cancelled or abandoned runs were not recorded/i)
-  // Use the app's existing history controls, whether native or custom.
   const size = page.getByRole('combobox', { name: 'Score size', exact: true })
-  if (await size.count()) await size.selectOption('set:2,7')
-  else { await page.getByRole('button', { name: 'Score size', exact: true }).click(); await page.getByRole('option', { name: '{2, 7}', exact: true }).click() }
+  await chooseFilter(size, 'set:2,7')
   await values(page, '≥1', '1', '100%')
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!).scores)).toEqual(scores)
 })
@@ -120,12 +118,10 @@ test('cancelled starts retain their exact factors and order across filter change
   await showStats(page)
   await values(page, '1', '0', '—')
   const size = page.getByRole('combobox', { name: 'Score size', exact: true })
-  if (await size.count()) await size.selectOption('set:2,7')
-  else { await page.getByRole('button', { name: 'Score size', exact: true }).click(); await page.getByRole('option', { name: '{2, 7}', exact: true }).click() }
+  await chooseFilter(size, 'set:2,7')
   await values(page, '1', '0', '—')
   const order = page.getByRole('combobox', { name: 'Score order', exact: true })
-  if (await order.count()) await order.selectOption('shuffled')
-  else { await page.getByRole('button', { name: 'Score order', exact: true }).click(); await page.getByRole('option', { name: 'Shuffled', exact: true }).click() }
+  await chooseFilter(order, 'shuffled')
   await values(page, '0', '0', '—')
   await page.reload()
   await values(page, '0', '0', '—')

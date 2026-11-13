@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
-import { chooseGridSize, showPractice, showStats } from './helpers'
+import { chooseFilter, chooseGridSize, showPractice, showStats } from './helpers'
 
 const scores = [
   { id: 'last', elapsedMs: 80000, completedAt: '2026-01-10T12:00:00.000Z' },
@@ -94,8 +94,8 @@ for (const appearance of ['dark', 'light'] as const) {
 test('plots exact settings, truthful time spacing and perfect-only averages with point tooltips', async ({ page }) => {
   await seed(page)
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
-  await expect(graph.getByRole('combobox', { name: 'Progress order' })).toHaveValue('ordered')
-  await expect(graph.getByRole('combobox', { name: 'Progress size' })).toHaveValue('2')
+  await expect(graph.getByRole('combobox', { name: 'Progress order' })).toHaveAttribute('data-value', 'ordered')
+  await expect(graph.getByRole('combobox', { name: 'Progress size' })).toHaveAttribute('data-value', '2')
   await expect(graph.getByRole('table', { name: 'Progress data' })).toBeVisible()
   await expect(graph.locator('details, summary, .recharts-cartesian-grid, .recharts-cartesian-axis, .recharts-legend-wrapper')).toHaveCount(0)
   await expect(graph.getByText('Data table', { exact: true })).toHaveCount(0)
@@ -144,21 +144,21 @@ test('persists exact graph controls independently of round and history settings'
   await seed(page)
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
   const raw = await page.evaluate(() => localStorage.getItem('times-tables.scores'))
-  await graph.getByRole('combobox', { name: 'Progress order' }).selectOption('shuffled')
+  await chooseFilter(graph.getByRole('combobox', { name: 'Progress order' }), 'shuffled')
   await expect(graph.locator('.recharts-scatter-symbol')).toHaveCount(1)
-  await graph.getByRole('combobox', { name: 'Progress size' }).selectOption('3')
+  await chooseFilter(graph.getByRole('combobox', { name: 'Progress size' }), '3')
   await expect(graph.getByText('No rounds for Shuffled · 3 × 3.', { exact: true })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Score order', exact: true }).selectOption('ordered')
+  await chooseFilter(page.getByRole('combobox', { name: 'Score order', exact: true }), 'ordered')
   await showPractice(page)
   await chooseGridSize(page, 4)
   await page.reload()
   await page.getByRole('link', { name: 'Stats', exact: true }).click()
-  await expect(graph.getByRole('combobox', { name: 'Progress order' })).toHaveValue('shuffled')
-  await expect(graph.getByRole('combobox', { name: 'Progress size' })).toHaveValue('3')
+  await expect(graph.getByRole('combobox', { name: 'Progress order' })).toHaveAttribute('data-value', 'shuffled')
+  await expect(graph.getByRole('combobox', { name: 'Progress size' })).toHaveAttribute('data-value', '3')
   await page.getByRole('link', { name: 'Practice', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('4 × 4')
   await showStats(page)
-  await expect(page.getByRole('combobox', { name: 'Score order', exact: true })).toHaveValue('ordered')
+  await expect(page.getByRole('combobox', { name: 'Score order', exact: true })).toHaveAttribute('data-value', 'ordered')
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(raw)
 })
 
@@ -238,7 +238,7 @@ test('empty graph stays usable without storage and never shows synthetic data', 
   await page.goto('/progress')
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
   await expect(graph).toContainText('No rounds for Shuffled · 12 × 12.')
-  await graph.getByRole('combobox', { name: 'Progress order' }).selectOption('ordered')
+  await chooseFilter(graph.getByRole('combobox', { name: 'Progress order' }), 'ordered')
   await expect(graph).toContainText('No rounds for Ordered · 12 × 12.')
   await expect(graph.locator('.recharts-scatter-symbol')).toHaveCount(0)
 })

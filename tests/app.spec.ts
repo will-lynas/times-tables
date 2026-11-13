@@ -55,13 +55,13 @@ test('finishes only explicitly, freezes a perfect result and persists its score 
   await expect(page.getByRole('textbox').first()).toHaveAttribute('readonly', '')
   await expect(page.getByText('Score saved in this browser.', { exact: true })).toHaveCount(0)
   await showStats(page)
-  await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
   await page.reload()
   await showPractice(page)
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
   await showStats(page)
   await expect(page.getByRole('table', { name: 'Score history' }).getByRole('row')).toHaveCount(2)
-  await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
+  await expect(page.locator('.score-heading')).toHaveText('Score history')
 })
 
 test('supports numeric editing and keyboard navigation without submitting', async ({ page }) => {
