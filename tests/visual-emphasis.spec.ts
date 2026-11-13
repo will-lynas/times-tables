@@ -15,7 +15,7 @@ for (const palette of ['dark', 'light'] as const) {
         { ...complete, id: 'partial', status: 'partial', attempted: 1, correct: 1, elapsedMs: 100, completedAt: '2026-01-05T12:00:00Z' },
       ] }))
     }, palette)
-    await page.goto('/')
+    await page.goto('/stats')
     const complete = page.getByRole('table', { name: 'Score history', exact: true })
     const rows = complete.locator('tbody tr')
     await expect(rows).toHaveCount(5)

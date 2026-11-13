@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { chooseGridSize } from './helpers'
+import { chooseGridSize, showPractice, showStats } from './helpers'
 
 test('small partial rounds retain keyboard controls and size-specific records after reset and Escape', async ({ page }) => {
   await page.goto('/')
@@ -37,10 +37,13 @@ test('small partial rounds retain keyboard controls and size-specific records af
   await expect(page.getByRole('timer')).toHaveText('0:00.0')
   await expect(cells.nth(0)).toHaveValue('')
   await chooseGridSize(page, 3)
+  await showStats(page)
   await expect(page.getByRole('table', { name: 'Score history', exact: true })).toBeVisible()
+  await showPractice(page)
   await page.locator('body').click({ position: { x: 8, y: 8 } })
   await page.keyboard.press('Space')
   await expect(cells).toHaveCount(9)
+  await showPractice(page)
   await cells.nth(8).fill('9')
   await page.keyboard.press('Escape')
   await expect(start).toBeFocused()
@@ -50,6 +53,7 @@ test('small partial rounds retain keyboard controls and size-specific records af
   await expect(cells.nth(8)).toHaveValue('9')
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await chooseGridSize(page, 2)
+  await showStats(page)
   await expect(page.getByRole('table', { name: 'Score history', exact: true })).toBeVisible()
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(saved)
 })
@@ -70,7 +74,7 @@ test('saves a small early finish separately from migrated complete scores across
   await expect(result).toContainText('2 / 4 attempted')
   await expect(result).toContainText('1 / 2 correct')
   await expect(result).toContainText('50% accuracy')
-  await expect(result).toContainText('2 unanswered cells are not graded.')
+  await expect(result).not.toContainText('unanswered cells are not graded')
   await expect(cells.nth(1)).toHaveAccessibleDescription('Incorrect. Correct: 2')
   await expect(cells.nth(2)).not.toHaveAttribute('aria-describedby')
   await expect(cells.nth(2).locator('..')).not.toHaveAttribute('data-result')
@@ -83,6 +87,7 @@ test('saves a small early finish separately from migrated complete scores across
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
   const partials = page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row').filter({ has: page.getByRole('cell', { name: 'Partial', exact: true }) })
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('2 × 2')
+  await showStats(page)
   await expect(partials).toHaveCount(1)
   await expect(partials).toContainText('2 / 4')
   await expect(partials).toContainText('50%')
@@ -90,7 +95,9 @@ test('saves a small early finish separately from migrated complete scores across
   await expect(full).toHaveCount(1)
   await expect(full).toContainText('4 / 4')
   await expect(page.getByText('Fastest perfect: 0:01.0', { exact: true })).toBeVisible()
+  await showPractice(page)
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
+  await showStats(page)
   await expect(full).toHaveCount(1)
   await expect(page.getByText('No perfect round yet', { exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: 'Score order' }).selectOption('shuffled')

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { showPractice, showStats } from './helpers'
 import { SCORE_KEY } from '../src/scores'
 
 test('cancel discards a running round without changing saved scores', async ({ page }) => {
@@ -35,9 +36,11 @@ test('cancel discards a running round without changing saved scores', async ({ p
   await expect(page.getByRole('button', { name: 'Finish', exact: true })).toBeDisabled()
   await page.clock.runFor(10000)
   await expect(page.getByRole('timer')).toHaveText('0:00.0')
+  await showStats(page)
   await expect(scores.getByRole('row')).toHaveCount(2)
   expect(await page.evaluate(key => localStorage.getItem(key), SCORE_KEY)).toBe(saved)
 
+  await showPractice(page)
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await expect(cells.first()).toBeFocused()
@@ -88,10 +91,12 @@ test('new round clears a completed result while preserving its saved score', asy
   await expect(page.getByRole('radio', { name: 'Shuffled', exact: true })).toBeEnabled()
   await page.clock.runFor(10000)
   await expect(page.getByRole('timer')).toHaveText('0:00.0')
+  await showStats(page)
   await expect(scores.getByRole('row')).toHaveCount(2)
   await expect(page.getByText('Fastest perfect: 0:05.0', { exact: true })).toBeVisible()
   expect(await page.evaluate(key => localStorage.getItem(key), SCORE_KEY)).toBe(saved)
 
+  await showPractice(page)
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await expect(cells.first()).toBeFocused()
   await cells.first().fill('1')
@@ -100,6 +105,7 @@ test('new round clears a completed result while preserving its saved score', asy
   await expect(page.getByRole('timer')).toHaveText('0:01.0')
   await page.reload()
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
+  await showStats(page)
   await expect(scores.getByRole('row')).toHaveCount(2)
   expect(await page.evaluate(key => localStorage.getItem(key), SCORE_KEY)).toBe(saved)
 })

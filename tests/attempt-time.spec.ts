@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+
 import { mkdir } from 'node:fs/promises'
 
 const now = Date.parse('2026-11-13T12:00:00.000Z')
@@ -21,7 +22,7 @@ async function seed(page: Page) {
     localStorage.setItem('times-tables.scores', JSON.stringify({ version: 3, scores: records }))
     localStorage.setItem('attempt-time-seeded', 'true')
   }, records)
-  await page.goto('/')
+  await page.goto('/stats')
   // Allow React to mount while keeping timestamp assertions deterministic.
   await expect.poll(async () => {
     await page.clock.runFor(100)
@@ -58,7 +59,6 @@ test('attempt dates are relative for a week, then local; exact dates are accessi
     await expect(time).toHaveAttribute('title', label)
     await expect(time).toHaveAccessibleDescription(label)
   }
-  await page.getByRole('link', { name: 'Progress', exact: true }).click()
   await expect.poll(async () => {
     await page.clock.runFor(100)
     return page.getByRole('table', { name: 'Progress data' }).count()
@@ -70,6 +70,7 @@ test('attempt dates are relative for a week, then local; exact dates are accessi
   await page.clock.runFor(2000)
   await expect(graphTimes.nth(1)).toHaveText(await exact(page, records[5].completedAt))
   await page.getByRole('link', { name: 'Practice', exact: true }).click()
+  await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await expect(times.nth(1)).toHaveText(/^[23] secs ago$/)
   await expect(times.nth(4)).toHaveText(await exact(page, records[5].completedAt))
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(raw)

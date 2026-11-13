@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { chooseGridSize } from './helpers'
+import { chooseGridSize, showPractice, showStats } from './helpers'
 
 for (const mode of ['Ordered', 'Shuffled']) {
   for (const size of [2, 7, 12]) {
@@ -85,10 +85,14 @@ test('filters scores independently by size and mode while preserving legacy roun
   await page.evaluate(score => localStorage.setItem('times-tables.scores', JSON.stringify({ version: 1, scores: [score] })), legacy)
   await page.reload()
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
+  await showStats(page)
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByText('143 / 144', { exact: true })).toBeVisible()
+  await showPractice(page)
   await chooseGridSize(page, 2)
+  await showStats(page)
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByText('143 / 144', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Score history', exact: true })).toBeVisible()
+  await showPractice(page)
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   for (const [index, answer] of ['1', '2', '2', '4'].entries()) {
     await page.getByRole('textbox').nth(index).fill(answer)
@@ -96,6 +100,7 @@ test('filters scores independently by size and mode while preserving legacy roun
   await page.getByRole('button', { name: 'Finish', exact: true }).click()
   const elapsed = await page.getByRole('timer').innerText()
   const scores = page.getByRole('table', { name: 'Score history', exact: true })
+  await showStats(page)
   await expect(scores.getByText('4 / 4', { exact: true })).toHaveCount(2)
   await expect(scores.getByText('100%', { exact: true })).toBeVisible()
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
@@ -105,8 +110,10 @@ test('filters scores independently by size and mode while preserving legacy roun
   expect(saved.scores[0]).toEqual({ ...legacy, size: 12, status: 'complete', attempted: 144 })
   expect(saved.scores[1]).toMatchObject({ size: 2, mode: 'ordered', correct: 4, total: 4 })
   await page.reload()
+  await showPractice(page)
   await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeChecked()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('2 × 2')
+  await showStats(page)
   await expect(scores.getByRole('row')).toHaveCount(3)
   await page.getByRole('combobox', { name: 'Score size' }).selectOption('12')
   await expect(scores.getByRole('row')).toHaveCount(2)
@@ -116,7 +123,9 @@ test('filters scores independently by size and mode while preserving legacy roun
   await expect(scores.getByRole('row')).toHaveCount(2)
   await expect(scores.getByText('4 / 4', { exact: true })).toHaveCount(2)
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
+  await showPractice(page)
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
+  await showStats(page)
   await expect(scores.getByRole('row')).toHaveCount(2)
   await expect(page.getByText('No perfect round yet', { exact: true })).toBeVisible()
   await page.getByRole('combobox', { name: 'Score order' }).selectOption('shuffled')
@@ -134,6 +143,7 @@ test('offers every grid size from 2 to 12, defaulting to 12 with hidden factors'
     await expect(page.getByRole('textbox').first()).toBeDisabled()
     await expect(page.getByRole('table', { name: 'Multiplication grid' }).getByRole('row')).toHaveCount(size + 1)
     await expect(selector).toHaveText(`${size} × ${size}`)
+    await expect(selector).toHaveAccessibleDescription(`${size} × ${size}`)
     await expect(page.getByText(`0 / ${size * size} filled`, { exact: true })).toBeVisible()
     await expect(page.getByRole('columnheader').filter({ hasText: /^\d+$/ })).toHaveCount(0)
     await expect(page.getByRole('timer')).toHaveText('0:00.0')

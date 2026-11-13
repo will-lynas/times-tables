@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { chooseGridSize } from './helpers'
+import { chooseGridSize, showPractice, showStats } from './helpers'
 
 for (const failure of ['getter', 'write'] as const) {
   test(`unavailable storage ${failure} keeps settings playable without falsely claiming a score was saved`, async ({ page }) => {
@@ -17,8 +17,10 @@ for (const failure of ['getter', 'write'] as const) {
     await completeGrid(page)
     await expect(page.getByRole('alert')).toContainText('Score not saved')
     await expect(page.getByText('Score saved in this browser.', { exact: true })).toHaveCount(0)
+    await showStats(page)
     await expect(page.getByRole('table', { name: 'Score history', exact: true })).toContainText('4 / 4')
     await page.reload()
+    await showPractice(page)
     await expect(page.getByRole('radio', { name: 'Shuffled', exact: true })).toBeChecked()
     await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('12 × 12')
   })
@@ -48,6 +50,7 @@ test('shows every saved setting after refresh with independent history filters a
   const raw = await page.evaluate(() => localStorage.getItem('times-tables.scores'))
   const history = page.getByRole('table', { name: 'Score history', exact: true })
   const full = history.getByRole('row').filter({ has: page.getByRole('cell', { name: 'Complete', exact: true }) })
+  await showStats(page)
   await expect(history.getByRole('row')).toHaveCount(11)
   await expect(full).toHaveCount(9)
   await expect(full.filter({ hasText: 'Ordered' }).filter({ hasText: '2 × 2' })).toHaveCount(8)
@@ -71,18 +74,22 @@ test('shows every saved setting after refresh with independent history filters a
   await expect(full).toHaveCount(1)
   await expect(history.getByRole('row')).toHaveCount(3)
   await expect(partials).toHaveCount(1)
+  await showPractice(page)
   await chooseGridSize(page, 12)
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
   await page.getByRole('button', { name: 'Switch to light mode' }).click()
+  await showStats(page)
   await expect(full).toHaveCount(1)
   await expect(history.getByRole('row')).toHaveCount(3)
   await expect(full).toContainText('Shuffled')
   await page.reload()
   await expect(order).toHaveValue('shuffled')
   await expect(size).toHaveValue('3')
+  await showPractice(page)
   await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeChecked()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('12 × 12')
   await expect(page.locator('.radix-themes')).toHaveClass(/light/)
+  await showStats(page)
   await expect(full).toHaveCount(1)
   await expect(history.getByRole('row')).toHaveCount(3)
   await order.selectOption('all')
@@ -99,6 +106,7 @@ test('shows every saved setting after refresh with independent history filters a
 })
 
 async function completeGrid(page: Page) {
+  await showPractice(page)
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   const cells = page.getByRole('textbox')
   for (let index = 0; index < await cells.count(); index++) {
@@ -117,14 +125,18 @@ for (const [mode, size] of [['Ordered', 12], ['Shuffled', 2], ['Ordered', 2]] as
     await completeGrid(page)
     const before = await page.evaluate(() => localStorage.getItem('times-tables.scores'))
     const heading = 'Score history'
+    await showStats(page)
     await expect(page.getByRole('table', { name: heading, exact: true })).toBeVisible()
     await page.reload()
     const after = await page.evaluate(() => localStorage.getItem('times-tables.scores'))
     console.log(JSON.stringify({ mode, size, before, after, headingAfterRefresh: await page.locator('#scores-heading').innerText() }))
     expect(after).toBe(before)
+    await showPractice(page)
     await expect(page.getByRole('radio', { name: mode, exact: true })).toBeChecked()
     await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText(`${size} × ${size}`)
+    await showStats(page)
     await expect(page.getByRole('table', { name: heading, exact: true }).getByRole('row')).toHaveCount(2)
+    await showPractice(page)
     await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeFocused()
     await completeGrid(page)
     await expect(page.getByText(`${size * size} / ${size * size} filled`, { exact: true })).toBeVisible()

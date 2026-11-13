@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { SCORE_KEY } from '../src/scores'
-import { chooseGridSize } from './helpers'
+import { chooseGridSize, showPractice, showStats } from './helpers'
 
 async function startSmall(page: Page) {
   await page.goto('/')
@@ -22,10 +22,13 @@ test('Enter on the page finishes a full grid once, then a new round still starts
   await expect(page.getByRole('heading', { name: 'Round complete', exact: true })).toBeVisible()
   await expect(page.getByText('4 / 4 correct', { exact: true })).toBeVisible()
   const history = page.getByRole('table', { name: 'Score history', exact: true })
+  await showStats(page)
   await expect(history.getByRole('row')).toHaveCount(2)
   await expect(history.getByRole('row').last()).toContainText('CompleteOrdered2 × 24 / 44 / 4100%')
   const saved = await savedScores(page)
   expect(saved).toMatchObject([{ status: 'complete', attempted: 4, correct: 4, total: 4 }])
+  await showPractice(page)
+  await page.locator('body').click({ position: { x: 8, y: 8 } })
   await page.keyboard.press('Enter')
   await cells.last().press('Enter')
   expect(await savedScores(page)).toEqual(saved)
@@ -177,6 +180,7 @@ test('Enter completion keeps history filters independent and persists round sett
   await cells.first().fill('0')
   const order = page.getByRole('combobox', { name: 'Score order', exact: true })
   const size = page.getByRole('combobox', { name: 'Score size', exact: true })
+  await showStats(page)
   await order.selectOption('ordered')
   await size.selectOption('2')
   for (const filter of [order, size]) {
@@ -185,6 +189,7 @@ test('Enter completion keeps history filters independent and persists round sett
     })))
     expect(prevented).toBe(false)
   }
+  await showPractice(page)
   await expect(page.getByRole('region', { name: 'Round result' })).toHaveCount(0)
   expect(await savedScores(page)).toEqual(original)
   await cells.first().press('Enter')
@@ -196,6 +201,7 @@ test('Enter completion keeps history filters independent and persists round sett
   await page.reload()
   await expect(page.getByRole('radio', { name: 'Shuffled', exact: true })).toBeChecked()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('3 × 3')
+  await showStats(page)
   await expect(order).toHaveValue('ordered')
   await expect(size).toHaveValue('2')
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(2)
@@ -253,11 +259,13 @@ test('Enter finishes a partial round in place and freezes the saved answers and 
   await expect(page.getByText('1 / 4 attempted', { exact: true })).toBeVisible()
   await expect(page.getByText('0 / 1 correct', { exact: true })).toBeVisible()
   await expect(cells.nth(1)).toHaveValue('')
+  await showStats(page)
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(2)
   const partials = page.getByRole('table', { name: 'Score history', exact: true })
   await expect(partials.getByRole('row')).toHaveCount(2)
   await expect(partials.getByRole('row').last().getByRole('cell')).toHaveText([/now|ago/, 'Partial', 'Ordered', '2 × 2', '1 / 4', '0 / 1', '0%', /\d+:\d{2}\.\d/])
   expect(await savedScores(page)).toMatchObject([{ status: 'partial', attempted: 1, correct: 0, total: 4, size: 2 }])
+  await showPractice(page)
   const elapsed = await page.getByRole('timer').innerText()
   const saved = await savedScores(page)
   await cells.first().press('9')

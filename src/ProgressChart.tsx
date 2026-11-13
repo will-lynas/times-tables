@@ -36,7 +36,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
     </div>
     {progress.points.length === 0 ? <p className="progress-empty">No rounds for {settingLabel}.</p> : <>
       <div className="progress-plot" role="img" aria-label={`Duration by date: ${settingLabel}`} aria-describedby="progress-method">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <ResponsiveContainer width="100%" height={280} minWidth={0}>
           <ScatterChart margin={{ top: 12, right: 12, bottom: 4, left: 0 }} accessibilityLayer>
             <XAxis hide type="number" dataKey="timestamp" scale="time" domain={domain} tickCount={6} padding={{ left: 12, right: 12 }} />
             <YAxis hide type="number" dataKey="seconds" name="Duration" domain={[0, 'auto']} tickCount={4} padding={{ top: 8, bottom: 8 }} />
@@ -58,7 +58,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The blue line is the trailing average of up to 10 perfect complete rounds for this exact order and size, using fewer rounds during warm-up. Lines connect calculated averages, not continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
+      <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The accent line is the trailing average of up to 10 perfect complete rounds for this exact order and size, using fewer rounds during warm-up. Lines connect calculated averages, not continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
       <div className="progress-data">
         <table className="score-table" aria-label="Progress data">
           <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Attempted</th><th scope="col">Accuracy</th><th scope="col">Duration</th><th scope="col">Rolling 10 perfect</th></tr></thead>

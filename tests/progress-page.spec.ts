@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { chooseGridSize } from './helpers'
 
-test('Progress has a direct, reloadable URL and browser history navigation', async ({ page }) => {
+test('Stats has a direct, reloadable URL and browser history navigation', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByRole('region', { name: 'Progress', exact: true })).toHaveCount(0)
-  await page.getByRole('link', { name: 'Progress', exact: true }).click()
-  await expect(page).toHaveURL(/\/progress$/)
-  await expect(page.getByRole('link', { name: 'Progress', exact: true })).toHaveAttribute('aria-current', 'page')
+  await page.getByRole('link', { name: 'Stats', exact: true }).click()
+  await expect(page).toHaveURL(/\/stats$/)
+  await expect(page.getByRole('link', { name: 'Stats', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('region', { name: 'Progress', exact: true })).toBeVisible()
   await expect(page.getByRole('table', { name: 'Multiplication grid' })).toBeHidden()
   await page.reload()
@@ -18,7 +18,7 @@ test('Progress has a direct, reloadable URL and browser history navigation', asy
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
   await page.goBack()
-  await expect(page).toHaveURL(/\/progress$/)
+  await expect(page).toHaveURL(/\/stats$/)
   await expect(page.getByRole('region', { name: 'Progress', exact: true })).toBeVisible()
   await page.goForward()
   await expect(page.getByRole('button', { name: 'Start', exact: true })).toBeVisible()
@@ -30,7 +30,7 @@ test('switching pages preserves an active round and scopes keyboard shortcuts', 
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   const inputs = page.getByRole('table', { name: 'Multiplication grid' }).getByRole('textbox')
   await inputs.first().fill('1')
-  await page.getByRole('link', { name: 'Progress', exact: true }).click()
+  await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await page.locator('body').click({ position: { x: 8, y: 8 } })
   await page.keyboard.press('Enter')
   await page.keyboard.press('Escape')
@@ -38,7 +38,7 @@ test('switching pages preserves an active round and scopes keyboard shortcuts', 
   await expect(inputs.first()).toHaveValue('1')
   await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Finish early', exact: true }).click()
-  await page.getByRole('link', { name: 'Progress', exact: true }).click()
+  await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await expect(page.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(1)
   await expect(page.getByRole('table', { name: 'Progress data' })).toContainText('Partial')
 })

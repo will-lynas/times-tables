@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { chooseGridSize } from './helpers'
+import { chooseGridSize, showPractice, showStats } from './helpers'
 
 test('keeps functional cues without explanatory filler', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('times-tables.scores', '{broken'))
@@ -9,7 +9,9 @@ test('keeps functional cues without explanatory filler', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Start', exact: true })).toHaveAccessibleDescription('Enter or Space to start')
   await expect(page.getByRole('alert')).toContainText('Saved scores could not be read.')
   await expect(page.getByText('Scores stay in this browser only.', { exact: true })).toHaveCount(0)
+  await showStats(page)
   await expect(page.getByText('No rounds yet.', { exact: true })).toBeVisible()
+  await showPractice(page)
   await chooseGridSize(page, 2)
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await expect(page.locator('.grid-footer')).toContainText('Esc cancel')
@@ -51,10 +53,13 @@ test('finishes only explicitly, freezes a perfect result and persists its score 
   await page.waitForTimeout(250)
   await expect(page.getByRole('timer')).toHaveText(elapsed)
   await expect(page.getByRole('textbox').first()).toHaveAttribute('readonly', '')
-  await expect(page.getByText('Score saved in this browser.', { exact: true })).toBeVisible()
+  await expect(page.getByText('Score saved in this browser.', { exact: true })).toHaveCount(0)
+  await showStats(page)
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
   await page.reload()
+  await showPractice(page)
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
+  await showStats(page)
   await expect(page.getByRole('table', { name: 'Score history' }).getByRole('row')).toHaveCount(2)
   await expect(page.getByText(`Fastest perfect: ${elapsed}`, { exact: true })).toBeVisible()
 })

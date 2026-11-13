@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mkdir } from 'node:fs/promises'
-import { chooseGridSize } from './helpers'
+import { chooseGridSize, showPractice, showStats } from './helpers'
 
 const scores = [
   { id: 'last', elapsedMs: 80000, completedAt: '2026-01-10T12:00:00.000Z' },
@@ -72,15 +72,16 @@ test('persists exact graph controls independently of round and history settings'
   await expect(graph.locator('.recharts-scatter-symbol')).toHaveCount(1)
   await graph.getByRole('combobox', { name: 'Progress size' }).selectOption('3')
   await expect(graph.getByText('No rounds for Shuffled · 3 × 3.', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Practice', exact: true }).click()
   await page.getByRole('combobox', { name: 'Score order', exact: true }).selectOption('ordered')
+  await showPractice(page)
   await chooseGridSize(page, 4)
   await page.reload()
-  await page.getByRole('link', { name: 'Progress', exact: true }).click()
+  await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await expect(graph.getByRole('combobox', { name: 'Progress order' })).toHaveValue('shuffled')
   await expect(graph.getByRole('combobox', { name: 'Progress size' })).toHaveValue('3')
   await page.getByRole('link', { name: 'Practice', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('4 × 4')
+  await showStats(page)
   await expect(page.getByRole('combobox', { name: 'Score order', exact: true })).toHaveValue('ordered')
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(raw)
 })

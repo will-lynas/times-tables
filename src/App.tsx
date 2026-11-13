@@ -13,17 +13,17 @@ function formatTime(ms: number) {
 }
 
 export default function App() {
-  const [page, setPage] = useState(() => window.location.pathname === '/progress' ? 'progress' : 'practice')
+  const [page, setPage] = useState(() => ['/stats', '/progress'].includes(window.location.pathname) ? 'stats' : 'practice')
   useEffect(() => {
-    const syncPage = () => setPage(window.location.pathname === '/progress' ? 'progress' : 'practice')
+    const syncPage = () => setPage(['/stats', '/progress'].includes(window.location.pathname) ? 'stats' : 'practice')
     window.addEventListener('popstate', syncPage)
     return () => window.removeEventListener('popstate', syncPage)
   }, [])
-  function changePage(event: MouseEvent<HTMLAnchorElement>, next: 'practice' | 'progress') {
+  function changePage(event: MouseEvent<HTMLAnchorElement>, next: 'practice' | 'stats') {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
     if (page === next) return
-    window.history.pushState(null, '', next === 'progress' ? '/progress' : '/')
+    window.history.pushState(null, '', next === 'stats' ? '/stats' : '/')
     setPage(next)
     window.scrollTo(0, 0)
   }
@@ -173,14 +173,14 @@ export default function App() {
     }
   }
 
-  return <Theme appearance={appearance} accentColor="blue" grayColor="slate" radius="medium">
+  return <Theme appearance={appearance} accentColor="yellow" grayColor="slate" radius="medium">
     <div className="small-screen"><h1>Times tables</h1><p>Bring a keyboard and a wider screen.</p><p>This practice grid needs a desktop window at least 1024 pixels wide.</p></div>
     <main className="practice">
       <h1 className="visually-hidden">Times tables</h1>
       <header className="page-header">
           <nav className="page-nav" aria-label="Main">
             <a href="/" aria-current={page === 'practice' ? 'page' : undefined} onClick={event => changePage(event, 'practice')}>Practice</a>
-            <a href="/progress" aria-current={page === 'progress' ? 'page' : undefined} onClick={event => changePage(event, 'progress')}>Progress</a>
+            <a href="/stats" aria-current={page === 'stats' ? 'page' : undefined} onClick={event => changePage(event, 'stats')}>Stats</a>
           </nav>
           <IconButton variant="ghost" color="gray" radius="full" onClick={toggleTheme}
             aria-label={`Switch to ${appearance === 'dark' ? 'light' : 'dark'} mode`}
@@ -211,8 +211,6 @@ export default function App() {
         <h2>{result.status === 'partial' ? 'Partial result' : 'Round complete'}</h2>
         {result.status === 'partial' && <span>{result.attempted} / {result.total} attempted</span>}
         <span>{result.correct} / {result.attempted} correct</span><span>{Number(result.accuracy.toFixed(1))}% accuracy</span>
-        {result.status === 'partial' && <span>{result.total - result.attempted} unanswered cells are not graded.</span>}
-        {!history.warning && <span className="save-status">{result.status === 'partial' ? 'Partial result' : 'Score'} saved in this browser.</span>}
       </section>}
       <div className="grid-stage" style={{ '--grid-tracks': size + 1 } as React.CSSProperties}>
       <table className="answer-grid" aria-label="Multiplication grid">
@@ -251,6 +249,10 @@ export default function App() {
         {!result && <Button disabled={!running || filled === 0} onClick={finish} aria-keyshortcuts="Enter">{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
       </div>
 
+      </div>
+      {page === 'stats' && <div className="stats-page">
+      {history.warning && <p className="storage-warning" role="alert">{history.warning}</p>}
+      <Suspense fallback={<p role="status">Loading stats…</p>}><ProgressChart scores={history.scores} initialSelection={{ mode, size }} /></Suspense>
       <section className="scores" aria-labelledby="scores-heading">
         <div className="score-heading"><h2 id="scores-heading">Score history</h2><div><span>{mode === 'ordered' ? 'Ordered' : 'Shuffled'} · {size} × {size} — </span><span>{perfect ? `Fastest perfect: ${formatTime(perfect.elapsedMs)}` : 'No perfect round yet'}</span></div></div>
         <div className="toolbar" role="group" aria-label="Score filters">
@@ -267,8 +269,7 @@ export default function App() {
           <tbody>{visibleScores.map(score => <tr key={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td><AttemptTime completedAt={score.completedAt} /></td><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{score.size} × {score.size}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>}
       </section>
-      </div>
-      {page === 'progress' && <Suspense fallback={<p role="status">Loading progress…</p>}><ProgressChart scores={history.scores} initialSelection={{ mode, size }} /></Suspense>}
+      </div>}
     </main>
   </Theme>
 }
