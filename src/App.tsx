@@ -185,7 +185,7 @@ export default function App() {
         {result.status === 'partial' && <span>{result.total - result.attempted} unanswered cells are not graded.</span>}
         {!history.warning && <span className="save-status">{result.status === 'partial' ? 'Partial result' : 'Score'} saved in this browser.</span>}
       </section>}
-      <div className="grid-stage">
+      <div className="grid-stage" style={{ '--grid-tracks': size + 1 } as React.CSSProperties}>
       <table className="answer-grid" aria-label="Multiplication grid">
         <thead><tr><th scope="col" aria-label="Multiply">×</th>{(grid?.columns ?? placeholders).map((column, index) => <th scope="col" key={index}>{column ?? '·'}</th>)}</tr></thead>
         <tbody>{(grid?.rows ?? placeholders).map((row, rowIndex) => <tr key={rowIndex}>
