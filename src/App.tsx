@@ -4,6 +4,7 @@ import { createGrid, scoreAnswers, type Grid, type Mode } from './game'
 import { loadScores, saveScores, rankScores, type Score } from './scores'
 import { loadSettings, saveSettings, type Settings } from './settings'
 import { GridSizePicker } from './GridSizePicker'
+import { AttemptTime } from './AttemptTime'
 const ProgressChart = lazy(() => import('./ProgressChart'))
 
 function formatTime(ms: number) {
@@ -246,8 +247,8 @@ export default function App() {
           </select></label>
         </div>
         {visibleScores.length === 0 ? <p>{history.scores.length > 0 ? 'No rounds match these filters.' : 'No rounds yet.'}</p> : <table className="score-table" aria-label="Score history">
-          <thead><tr><th>Status</th><th>Order</th><th>Size</th><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
-          <tbody>{visibleScores.map(score => <tr key={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{score.size} × {score.size}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
+          <thead><tr><th>Date</th><th>Status</th><th>Order</th><th>Size</th><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
+          <tbody>{visibleScores.map(score => <tr key={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td><AttemptTime completedAt={score.completedAt} /></td><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{score.size} × {score.size}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>}
       </section>
     </main>

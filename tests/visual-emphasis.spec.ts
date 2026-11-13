@@ -19,7 +19,7 @@ for (const palette of ['dark', 'light'] as const) {
     const complete = page.getByRole('table', { name: 'Score history', exact: true })
     const rows = complete.locator('tbody tr')
     await expect(rows).toHaveCount(5)
-    await expect(rows.nth(0).getByRole('cell')).toHaveText(['Partial', 'Ordered', '2 × 2', '1 / 4', '1 / 1', '100%', '0:00.1'])
+    await expect(rows.nth(0).getByRole('cell')).toHaveText([/./, 'Partial', 'Ordered', '2 × 2', '1 / 4', '1 / 1', '100%', '0:00.1'])
     await expect(rows.nth(1)).toContainText('3 / 4')
     await expect(rows.nth(2)).toContainText('143 / 144')
     await expect(rows.nth(3)).toContainText('4 / 4')
@@ -62,7 +62,7 @@ for (const palette of ['dark', 'light'] as const) {
     expect(new Set([contrast.neutral, contrast.perfect, contrast.inaccurate]).size).toBe(3)
     for (const [index, row] of contrast.rows.entries()) {
       const expected = index === 0 ? contrast.neutral : index < 3 ? contrast.inaccurate : contrast.perfect
-      expect(row.colors, `row ${index}`).toEqual(Array(7).fill(expected))
+      expect(row.colors, `row ${index}`).toEqual(Array(8).fill(expected))
       expect(row.opacity.every(opacity => opacity === '1')).toBe(true)
       expect(Math.min(...row.ratios)).toBeGreaterThanOrEqual(4.5)
     }

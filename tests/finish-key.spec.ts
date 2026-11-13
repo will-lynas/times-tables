@@ -256,7 +256,7 @@ test('Enter finishes a partial round in place and freezes the saved answers and 
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(2)
   const partials = page.getByRole('table', { name: 'Score history', exact: true })
   await expect(partials.getByRole('row')).toHaveCount(2)
-  await expect(partials.getByRole('row').last().getByRole('cell')).toHaveText(['Partial', 'Ordered', '2 × 2', '1 / 4', '0 / 1', '0%', /\d+:\d{2}\.\d/])
+  await expect(partials.getByRole('row').last().getByRole('cell')).toHaveText([/now|ago/, 'Partial', 'Ordered', '2 × 2', '1 / 4', '0 / 1', '0%', /\d+:\d{2}\.\d/])
   expect(await savedScores(page)).toMatchObject([{ status: 'partial', attempted: 1, correct: 0, total: 4, size: 2 }])
   const elapsed = await page.getByRole('timer').innerText()
   const saved = await savedScores(page)

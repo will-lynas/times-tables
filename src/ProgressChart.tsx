@@ -3,6 +3,7 @@ import { CartesianGrid, Legend, Line, ResponsiveContainer, Scatter, ScatterChart
 import { buildProgress, formatDuration, progressTimeDomain, type ProgressPoint, type ProgressSelection } from './progress'
 import { loadProgressSelection, saveProgressSelection } from './progressSettings'
 import type { Score } from './scores'
+import { AttemptTime } from './AttemptTime'
 import './progress.css'
 
 const dateTime = new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', timeZoneName: 'short' })
@@ -78,7 +79,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
         <table className="score-table" aria-label="Progress data">
           <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Attempted</th><th scope="col">Accuracy</th><th scope="col">Duration</th><th scope="col">Rolling 10 perfect</th></tr></thead>
           <tbody>{progress.points.map(point => <tr key={point.id} className={point.perfect ? undefined : 'progress-muted'}>
-            <td><time dateTime={point.completedAt}>{dateTime.format(point.timestamp)}</time></td>
+            <td><AttemptTime completedAt={point.completedAt} /></td>
             <td>{point.status === 'complete' ? 'Complete' : 'Partial'}</td><td>{point.attempted} / {point.total}</td>
             <td>{Number(point.accuracy.toFixed(1))}%</td><td>{formatDuration(point.seconds)}</td>
             <td>{point.averageSeconds === null ? '—' : `${formatDuration(point.averageSeconds)} (${point.averageCount}/10)`}</td>
