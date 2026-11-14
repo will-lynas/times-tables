@@ -139,7 +139,7 @@ for (const appearance of ['dark', 'light'] as const) {
       color: getComputedStyle(element).fill, opacity: getComputedStyle(element).fillOpacity,
     }))))
     expect(Number(fills[0].opacity)).toBe(0.5)
-    expect(Number(fills[1].opacity)).toBe(0.4)
+    expect(Number(fills[1].opacity)).toBe(1)
     expect(fills[0].color).not.toBe(fills[1].color)
     await expect(graph.locator('.progress-summary, .recharts-label')).toHaveCount(0)
     await expect(graph.getByText('Ordered · 2 × 2', { exact: true })).toHaveCount(0)

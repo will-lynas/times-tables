@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CartesianGrid, Dot, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
+import { CartesianGrid, Cell, Dot, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { buildProgress, formatDuration, progressTimeDomain, type ProgressPoint, type ProgressSelection } from './progress'
 import type { Score } from './scores'
 import { presetFactors, settingLabel as labelFactors } from './factors'
@@ -82,7 +82,13 @@ export default function ProgressChart({ scores, selection, onSelectionChange }: 
               stroke="var(--gray-12)" strokeOpacity={0.9} strokeWidth={2}
               dot={({ cx, cy, payload }) => payload.isRecord ? <Dot cx={cx} cy={cy} r={3} className="progress-best-dot" fill="var(--gray-12)" /> : <g />}
               activeDot={false} isAnimationActive={false} />}
-            <Scatter className="progress-other" name="Partial / inaccurate" data={other} fill="var(--gray-11)" fillOpacity={0.4} isAnimationActive={false} />
+            <Scatter className="progress-other" name="Partial / inaccurate" data={other} fillOpacity={1} isAnimationActive={false}>
+              {other.map(point => {
+                const complete = point.status === 'complete' && point.attempted === point.total
+                return <Cell key={point.id} className={complete ? 'progress-inaccurate' : 'progress-partial'}
+                  aria-label={complete ? 'Complete inaccurate run' : 'Partial run'} fill={complete ? 'var(--red-11)' : 'var(--gray-11)'} />
+              })}
+            </Scatter>
             <Scatter className="progress-perfect" name="Perfect" data={perfect} fill="var(--accent-11)" fillOpacity={0.5} isAnimationActive={false} />
           </ScatterChart>
         </ResponsiveContainer>
