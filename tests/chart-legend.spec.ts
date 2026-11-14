@@ -54,6 +54,8 @@ for (const appearance of ['dark', 'light']) for (const axis of ['time', 'runs'])
       else {
         await expect(graph.locator(s.dot)).toHaveCount(0)
         await expectMuted(button)
+        await button.hover()
+        await expect(button).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
       }
     }
     expect(await rawGeometry(graph)).toEqual(original)
