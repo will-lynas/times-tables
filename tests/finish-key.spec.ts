@@ -165,7 +165,7 @@ test('does not finish behind a visible popup but allows Shift+Enter after it clo
   await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
 })
 
-test('Shift+Enter completion keeps history filters independent and persists round settings across refresh', async ({ page }) => {
+test('Shift+Enter completion locks shared settings during play and persists round settings across refresh', async ({ page }) => {
   await startSmall(page)
   const cells = page.getByRole('textbox')
   for (const [index, value] of ['1', '2', '2', '4'].entries()) await cells.nth(index).fill(value)
@@ -181,17 +181,8 @@ test('Shift+Enter completion keeps history filters independent and persists roun
   const order = page.getByRole('radiogroup', { name: 'Stats order', exact: true })
   const size = page.getByRole('combobox', { name: 'Stats size', exact: true })
   await showStats(page)
-  await chooseFilter(order, 'ordered')
-  await chooseFilter(size, '2')
-  for (const filter of [size]) {
-    const label = await filter.getAttribute('aria-label')
-    await filter.press('Enter')
-    const panel = page.getByRole('listbox', { name: `${label} options`, exact: true })
-    await expect(panel).toBeVisible()
-    await page.keyboard.press('Enter')
-    await expect(panel).toHaveCount(0)
-    await expect(filter).toBeFocused()
-  }
+  await expect(size).toBeDisabled()
+  await expect(order.getByRole('radio', { name: 'Ordered', exact: true })).toBeDisabled()
   await showPractice(page)
   await expect(page.getByRole('region', { name: 'Round result' })).toHaveCount(0)
   expect(await savedScores(page)).toEqual(original)
@@ -205,8 +196,10 @@ test('Shift+Enter completion keeps history filters independent and persists roun
   await expect(page.getByRole('radio', { name: 'Shuffled', exact: true })).toBeChecked()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('3 × 3')
   await showStats(page)
-  await expect(order).toHaveAttribute('data-value', 'ordered')
-  await expect(size).toHaveAttribute('data-value', '2')
+  await expect(order).toHaveAttribute('data-value', 'shuffled')
+  await expect(size).toHaveAttribute('data-value', '3')
+  await chooseFilter(order, 'ordered')
+  await chooseFilter(size, '2')
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(2)
   await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row').filter({ has: page.getByRole('cell', { name: 'Partial', exact: true }) })).toHaveCount(0)
   await chooseFilter(order, 'shuffled')

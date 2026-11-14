@@ -19,6 +19,7 @@ export type ProgressPoint = Score & {
 }
 
 export function buildProgress(scores: readonly Score[], selection: ProgressSelection) {
+  if (selection.factors?.length === 0) return { points: [], perfectCount: 0 }
   const key = factorKey(selection.factors ?? presetFactors(selection.size))
   // Undated records have no honest x coordinate. Omit only from this derived view;
   // never substitute a date or alter the stored source.

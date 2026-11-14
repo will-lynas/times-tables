@@ -59,19 +59,17 @@ export default function App() {
   const factors = custom ? customFactors : presetFactors(settings.size)
   const size = factors.length
   const fallbackSelection = { mode, size: size || 12, factors: size ? factors : presetFactors(12) }
-  const [statsSelection, setStatsSelection] = useState<ProgressSelection | null>(() => page === 'stats' ? loadProgressSelection(fallbackSelection) : null)
-  const selection = statsSelection ?? loadProgressSelection(fallbackSelection)
-  const selectedFactors = selection.factors ?? presetFactors(selection.size)
+  const [progressPreferences, setProgressPreferences] = useState(() => loadProgressSelection(fallbackSelection))
+  // Gameplay owns the exact set; graph preferences own presentation only.
+  const selection = { ...progressPreferences, mode, size, factors }
+  const selectedFactors = factors
+  const selectedKey = factors.length ? factorOption(factors) : 'none'
   function chooseStats(change: Partial<ProgressSelection>) {
-    const next = { ...selection, ...change }
-    setStatsSelection(next)
-    void saveProgressSelection(change, selection).then(warning => {
-      if (warning) setStatsSelection(current => ({ ...(current ?? next), warning }))
+    setProgressPreferences(current => ({ ...current, ...change }))
+    void saveProgressSelection(change, fallbackSelection).then(warning => {
+      if (warning) setProgressPreferences(current => ({ ...current, warning }))
     })
   }
-  useEffect(() => {
-    if (page === 'stats' && statsSelection === null) setStatsSelection(selection)
-  }, [page, statsSelection, selection])
   function updateSettings(change: Partial<Settings>) {
     const next = { ...settings, ...change }
     setSettings(next)
@@ -102,11 +100,20 @@ export default function App() {
   const startButton = useRef<HTMLButtonElement>(null)
   const finished = useRef(false)
   const running = startedAt !== null
+  const settingsLocked = running || (grid !== null && result === null)
+  function changeSharedSettings(change: Partial<Settings>) {
+    if (settingsLocked) return
+    const next = { ...settings, ...change }
+    const nextFactors = next.choice === 'custom' ? next.customFactors ?? presetFactors(next.size) : presetFactors(next.size)
+    if (grid !== null) resetRound()
+    updateSettings(change)
+    setAnswers(Array(nextFactors.length ** 2).fill(''))
+  }
   const filled = answers.filter(Boolean).length
 
 
   const visibleScores = history.scores.filter(score => score.mode === selection.mode
-    && factorOption(scoreFactors(score)) === factorOption(selectedFactors))
+    && factorOption(scoreFactors(score)) === selectedKey)
     .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
   const total = size * size
   const placeholders = Array.from({ length: size }, () => null)
@@ -260,16 +267,14 @@ export default function App() {
       {theme.warning && <p className="storage-warning" role="alert">{theme.warning}</p>}
       <div className="practice-page" hidden={page !== 'practice'}>
       <section className="toolbar" aria-label="Round controls">
-        <SegmentedControl.Root aria-label="Table order" value={mode} onValueChange={value => updateSettings({ mode: value as Mode })} disabled={grid !== null}>
+        <SegmentedControl.Root aria-label="Table order" value={mode} onValueChange={value => changeSharedSettings({ mode: value as Mode })} disabled={settingsLocked}>
           <SegmentedControl.Item value="ordered">Ordered</SegmentedControl.Item>
           <SegmentedControl.Item value="shuffled">Shuffled</SegmentedControl.Item>
         </SegmentedControl.Root>
-        <GridSizePicker value={settings.size} disabled={grid !== null} custom={custom} factors={customFactors} onChange={nextSize => {
-          updateSettings({ size: nextSize, choice: 'preset' })
-          setAnswers(Array(nextSize * nextSize).fill(''))
+        <GridSizePicker value={settings.size} disabled={settingsLocked} custom={custom} factors={customFactors} onChange={nextSize => {
+          changeSharedSettings({ size: nextSize, choice: 'preset' })
         }} onCustomChange={nextFactors => {
-          updateSettings({ choice: 'custom', customFactors: nextFactors })
-          setAnswers(Array(nextFactors.length ** 2).fill(''))
+          changeSharedSettings({ choice: 'custom', customFactors: nextFactors })
         }} />
         <div className="stats"><span>{filled} / {total} filled</span><span role="timer" aria-label="Elapsed time">{formatTime(elapsed)}</span></div>
         {running && <Button variant="soft" color="gray" onClick={resetRound}>Cancel</Button>}
@@ -325,17 +330,19 @@ export default function App() {
       {page === 'stats' && <div className="stats-page">
       {history.warning && <p className="storage-warning" role="alert">{history.warning}</p>}
         <div className="toolbar stats-settings" role="group" aria-label="Stats settings">
-          <SegmentedControl.Root aria-label="Stats order" data-value={selection.mode} value={selection.mode} onValueChange={value => chooseStats({ mode: value as Mode })}>
+          <SegmentedControl.Root aria-label="Stats order" data-value={selection.mode} value={selection.mode} disabled={settingsLocked} onValueChange={value => changeSharedSettings({ mode: value as Mode })}>
             <SegmentedControl.Item value="ordered">Ordered</SegmentedControl.Item>
             <SegmentedControl.Item value="shuffled">Shuffled</SegmentedControl.Item>
           </SegmentedControl.Root>
-          <StyledSelect label="Stats size" sizes value={factorOption(selectedFactors)} onChange={value => {
+          <StyledSelect label="Stats size" sizes disabled={settingsLocked} value={selectedKey} onChange={value => {
+            if (value === 'none') return
             const values = factorsFromOption(value)
-            chooseStats({ size: values.length, factors: values })
-          }} options={factorSetOptions([...history.scores.map(scoreFactors), ...tracking.starts.map(run => run.factors), factors, customFactors, selectedFactors])} />
+            changeSharedSettings(value.startsWith('set:') ? { choice: 'custom', customFactors: values } : { size: values.length, choice: 'preset' })
+          }} options={[...(!factors.length ? [{ value: 'none', label: 'None' }] : []), ...factorSetOptions([...history.scores.map(scoreFactors), ...tracking.starts.map(run => run.factors), factors, customFactors, selectedFactors])]} />
         </div>
+      {settings.warning && <p className="storage-warning" role="alert">{settings.warning}</p>}
       {selection.warning && <p className="storage-warning" role="alert">{selection.warning}</p>}
-      <StatsSummary scores={history.scores} tracking={tracking} mode={selection.mode} selection={factorOption(selectedFactors)} unavailable={Boolean(history.warning)} />
+      <StatsSummary scores={history.scores} tracking={tracking} mode={selection.mode} selection={selectedKey} unavailable={Boolean(history.warning)} />
       <Suspense fallback={<p role="status">Loading stats…</p>}><ProgressChart scores={history.scores} selection={selection} onSelectionChange={chooseStats} /></Suspense>
       <section className="scores" aria-labelledby="scores-heading">
         <div className="score-heading"><h2 id="scores-heading">Score history</h2></div>

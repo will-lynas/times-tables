@@ -101,7 +101,7 @@ test('plots exact settings, truthful time spacing and perfect-only averages with
   await expect(graph.locator('.progress-summary')).toHaveCount(0)
 })
 
-test('persists exact graph controls independently of round and history settings', async ({ page }) => {
+test('persists shared exact controls and reflects subsequent practice changes', async ({ page }) => {
   await seed(page)
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
   const raw = await page.evaluate(() => localStorage.getItem('times-tables.scores'))
@@ -115,7 +115,7 @@ test('persists exact graph controls independently of round and history settings'
   await page.reload()
   await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await expect(page.getByRole('radiogroup', { name: 'Stats order' })).toHaveAttribute('data-value', 'shuffled')
-  await expect(page.getByRole('combobox', { name: 'Stats size' })).toHaveAttribute('data-value', '3')
+  await expect(page.getByRole('combobox', { name: 'Stats size' })).toHaveAttribute('data-value', '4')
   await page.getByRole('link', { name: 'Practice', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('4 × 4')
   await showStats(page)

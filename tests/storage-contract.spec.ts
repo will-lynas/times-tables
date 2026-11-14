@@ -59,7 +59,7 @@ test('two stale tabs finishing together retain both rounds and independent prefe
   await page.reload()
   await expect(page.getByRole('radiogroup', { name: 'Stats order', exact: true })).toHaveAttribute('data-value', 'ordered')
   await expect(page.getByRole('combobox', { name: 'Stats size', exact: true })).toHaveAttribute('data-value', '2')
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.progress')!))).toMatchObject({ mode: 'ordered', factors: [1, 2] })
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.settings')!))).toMatchObject({ mode: 'ordered', size: 2 })
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!).scores.map((s: { id: string }) => s.id))).toEqual(ids)
   await other.close()
 })

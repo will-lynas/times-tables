@@ -155,7 +155,8 @@ test('Runs keeps exact-set and order filtering, and remains a keyboard-operable 
   await expect(runs).toHaveAttribute('aria-pressed', 'true')
   await page.reload()
   await expect(runs).toHaveAttribute('aria-pressed', 'true')
-  expect(await page.evaluate(() => ({ scores: localStorage.getItem('times-tables.scores'), settings: localStorage.getItem('times-tables.settings') }))).toEqual(source)
+  expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(source.scores)
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.settings')!))).toMatchObject({ mode: 'shuffled', size: 2, choice: 'preset', marker: { keep: true } })
 })
 
 for (const raw of ['{broken', '{"version":2,"mode":"ordered","size":2,"axisMode":"runs"}', '{"version":1,"mode":"ordered","size":2,"axisMode":"future"}']) test(`unsupported preference remains byte-identical: ${raw}`, async ({ page }) => {

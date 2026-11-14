@@ -19,7 +19,7 @@ export default function ProgressChart({ scores, selection, onSelectionChange }: 
   const domain: [number, number] = runs ? count > 1 ? [1, count] : [0, 2] : progressTimeDomain(progress.points)
   const runTicks = Array.from({ length: Math.min(count, 6) }, (_, i) => Math.round(1 + i * (count - 1) / (Math.min(count, 6) - 1 || 1)))
   const factors = selection.factors ?? presetFactors(selection.size)
-  const settingLabel = `${selection.mode === 'ordered' ? 'Ordered' : 'Shuffled'} · ${labelFactors(factors)}`
+  const settingLabel = `${selection.mode === 'ordered' ? 'Ordered' : 'Shuffled'} · ${factors.length ? labelFactors(factors) : 'None'}`
 
   return <section className="progress" aria-labelledby="progress-heading">
     <div className="progress-heading">

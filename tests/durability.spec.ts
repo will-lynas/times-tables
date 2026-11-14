@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { chooseGridSize, chooseFilter, showStats } from './helpers'
 
-test('graph selection survives reload before its delayed preference commit', async ({ page, context }) => {
+test('shared order survives reload before its delayed gameplay preference commit', async ({ page, context }) => {
   await page.goto('/')
   await chooseGridSize(page, 2)
   await showStats(page)
@@ -10,7 +10,7 @@ test('graph selection survives reload before its delayed preference commit', asy
   await holder.evaluate(async () => {
     let acquired!: () => void
     const ready = new Promise<void>(resolve => { acquired = resolve })
-    void navigator.locks.request('times-tables.progress', () => new Promise<void>(resolve => {
+    void navigator.locks.request('times-tables.settings', () => new Promise<void>(resolve => {
       Object.assign(window, { releaseStorageLock: resolve }); acquired()
     }))
     await ready
@@ -19,7 +19,7 @@ test('graph selection survives reload before its delayed preference commit', asy
   await chooseFilter(order, 'ordered')
   await page.reload({ waitUntil: 'commit' })
   await holder.evaluate(() => (window as unknown as { releaseStorageLock: () => void }).releaseStorageLock())
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.progress') ?? '{}').mode)).toBe('ordered')
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.settings') ?? '{}').mode)).toBe('ordered')
   await expect(order).toHaveAttribute('data-value', 'ordered')
   await holder.close()
 })
