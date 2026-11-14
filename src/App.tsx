@@ -152,10 +152,9 @@ export default function App() {
   const visibleScores = history.scores.filter(score => score.mode === selection.mode
     && factorOption(scoreFactors(score)) === selectedKey)
     .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
-  // Aggregate UI keeps its existing optimistic session results; error history
+  // Stats retains its exact selection; Calculations spans all settings and
   // includes only source records whose score transaction actually committed.
   const recordedCalculations = page === 'calculations' ? loadScores() : null
-  const selectedScoreIds = new Set(visibleScores.map(score => score.id))
   const total = size * size
   const placeholders = Array.from({ length: size }, () => null)
 
@@ -404,7 +403,7 @@ export default function App() {
         <a href="/stats" aria-current={page === 'stats' ? 'page' : undefined} onClick={event => changePage(event, 'stats')}>Overview</a>
         <a href="/stats/calculations" aria-current={page === 'calculations' ? 'page' : undefined} onClick={event => changePage(event, 'calculations')}>Calculations</a>
       </nav>
-      {page === 'calculations' ? <CalculationStats scores={recordedCalculations!.scores.filter(score => selectedScoreIds.has(score.id))} unavailable={Boolean(history.warning || recordedCalculations!.warning)} /> : <>
+      {page === 'calculations' ? <CalculationStats scores={recordedCalculations!.scores} unavailable={Boolean(history.warning || recordedCalculations!.warning)} /> : <>
       <StatsSummary scores={history.scores} tracking={tracking} mode={selection.mode} selection={selectedKey} unavailable={Boolean(history.warning)} />
       <Suspense fallback={<p role="status">Loading stats…</p>}><ProgressChart scores={history.scores} selection={selection} onSelectionChange={chooseStats} /></Suspense>
       <section className="scores" aria-labelledby="scores-heading">

@@ -50,7 +50,7 @@ test('a submitted partial run retains only final answers and actual ordered cell
   await expect(table).toBeVisible()
 })
 
-test('coverage, exact settings and directional counts use final detailed answers only', async ({ page }) => {
+test('coverage across all settings and directional counts use final detailed answers only', async ({ page }) => {
   const { calculations: _, ...old } = fixture('old')
   const scores = [old, fixture('partial'), fixture('complete', [6, 9], ['36', '0', '54', '81']),
     fixture('more', [6, 9], ['0', '', '0', '']), fixture('different-set', [5, 9], ['0', '0', '0', '0']),
@@ -62,18 +62,18 @@ test('coverage, exact settings and directional counts use final detailed answers
   await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeChecked()
   await chooseFilter(page.getByRole('combobox', { name: 'Stats size', exact: true }), 'set:6,9')
   const table = page.getByRole('table', { name: 'Incorrect calculations' })
-  await expect(page.getByText('Detail coverage: 3 / 4 runs · 9 answered')).toBeVisible()
+  await expect(page.getByText('Detail coverage: 5 / 6 runs · 17 answered')).toBeVisible()
   const rows = table.getByRole('row')
-  await expect(rows).toHaveCount(4)
+  await expect(rows).toHaveCount(8)
   await expect(rows.nth(1).getByRole('rowheader')).toHaveText('9 × 6')
-  await expect(rows.nth(1).getByRole('cell').nth(0)).toHaveText('2')
-  await expect(rows.nth(1).getByRole('cell').nth(1)).toHaveText('3')
-  await expect(rows.nth(1).getByRole('cell').nth(2)).toHaveText('66.7%')
+  await expect(rows.nth(1).getByRole('cell').nth(0)).toHaveText('3')
+  await expect(rows.nth(1).getByRole('cell').nth(1)).toHaveText('4')
+  await expect(rows.nth(1).getByRole('cell').nth(2)).toHaveText('75%')
   await expect(rows.nth(2).getByRole('rowheader')).toHaveText('6 × 6')
   await expect(rows.nth(3).getByRole('rowheader')).toHaveText('6 × 9')
   await rows.nth(1).getByText('Answers', { exact: true }).click()
   await expect(rows.nth(1)).toContainText('Correct: 54')
-  await expect(rows.nth(1)).toContainText('0 (2)')
+  await expect(rows.nth(1)).toContainText('0 (3)')
   await page.getByRole('link', { name: 'Overview', exact: true }).click()
   await page.goBack()
   await expect(table).toBeVisible()
