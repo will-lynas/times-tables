@@ -10,25 +10,39 @@ export type ProgressPoint = Score & {
   accuracy: number
   averageSeconds: number | null
   averageCount: number
+  average100Seconds: number | null
+  average100Count: number
+  bestSeconds: number | null
+  isRecord: boolean
 }
 
 export function buildProgress(scores: readonly Score[], selection: ProgressSelection) {
   const key = factorKey(selection.factors ?? presetFactors(selection.size))
-  const selected = scores.filter(score => score.mode === selection.mode && factorKey(scoreFactors(score)) === key)
+  // Undated records have no honest x coordinate. Omit only from this derived view;
+  // never substitute a date or alter the stored source.
+  const selected = scores.filter(score => score.mode === selection.mode && factorKey(scoreFactors(score)) === key
+    && Number.isFinite(Date.parse(score.completedAt)))
     .sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt))
   const window: number[] = []
   let perfectCount = 0
+  let bestSeconds: number | null = null
   const points: ProgressPoint[] = selected.map(score => {
-    const perfect = score.status === 'complete' && score.attempted === score.total && score.correct === score.total
+    const perfect = score.status === 'complete' && score.total === scoreFactors(score).length ** 2
+      && score.attempted === score.total && score.correct === score.total
+    const isRecord = perfect && (bestSeconds === null || score.elapsedMs / 1000 < bestSeconds)
+    if (isRecord) bestSeconds = score.elapsedMs / 1000
     if (perfect) {
       perfectCount++
       window.push(score.elapsedMs / 1000)
-      if (window.length > 10) window.shift()
+      if (window.length > 100) window.shift()
     }
-    const averageSeconds = perfect ? window.reduce((sum, seconds) => sum + seconds, 0) / window.length : null
+    const recent10 = window.slice(-10)
+    const averageSeconds = perfect ? recent10.reduce((sum, seconds) => sum + seconds, 0) / recent10.length : null
+    const average100Seconds = perfect ? window.reduce((sum, seconds) => sum + seconds, 0) / window.length : null
     return { ...score, timestamp: Date.parse(score.completedAt), seconds: score.elapsedMs / 1000,
       perfect, accuracy: score.attempted === 0 ? 0 : score.correct / score.attempted * 100,
-      averageSeconds, averageCount: perfect ? window.length : 0 }
+      averageSeconds, averageCount: perfect ? recent10.length : 0,
+      average100Seconds, average100Count: perfect ? window.length : 0, bestSeconds, isRecord }
   })
   return { points, perfectCount }
 }

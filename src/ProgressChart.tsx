@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
+import { CartesianGrid, Dot, Line, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { buildProgress, formatDuration, progressTimeDomain, type ProgressPoint, type ProgressSelection } from './progress'
 import { loadProgressSelection, saveProgressSelection } from './progressSettings'
 import { scoreFactors, type Score } from './scores'
@@ -44,7 +44,9 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
         <ResponsiveContainer width="100%" height={280} minWidth={0}>
           <ScatterChart margin={{ top: 12, right: 12, bottom: 4, left: 0 }} accessibilityLayer>
             <XAxis hide type="number" dataKey="timestamp" scale="time" domain={domain} tickCount={6} padding={{ left: 12, right: 12 }} />
-            <YAxis hide type="number" dataKey="seconds" name="Duration" domain={[0, 'auto']} tickCount={4} padding={{ top: 8, bottom: 8 }} />
+            <YAxis type="number" dataKey="seconds" name="Duration" domain={[0, 'auto']} tickCount={5} width={76}
+              tickFormatter={formatDuration} tick={{ fill: 'var(--gray-11)', fontSize: 11 }} tickLine={false} axisLine={false} padding={{ top: 8, bottom: 8 }} />
+            <CartesianGrid vertical={false} syncWithTicks stroke="var(--gray-11)" strokeOpacity={0.12} />
             <ZAxis range={[44, 44]} />
             <Tooltip cursor={false} isAnimationActive={false} content={({ active, payload }) => {
               const point: ProgressPoint | undefined = payload?.[0]?.payload
@@ -57,21 +59,31 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
                 <dl>
                   <dt>Accuracy</dt><dd>{Number(point.accuracy.toFixed(1))}%</dd>
                   <dt>Answered</dt><dd>{point.attempted} / {point.total}</dd>
-                  {point.perfect && <><dt>Average</dt><dd>{formatDuration(point.averageSeconds!)}</dd></>}
+                  {point.perfect && <>
+                    <dt>Average of 10</dt><dd>{formatDuration(point.averageSeconds!)}</dd>
+                    <dt>Average of 100</dt><dd>{formatDuration(point.average100Seconds!)}</dd>
+                    <dt>Best time</dt><dd>{formatDuration(point.bestSeconds!)}</dd>
+                  </>}
                 </dl>
                 <time dateTime={point.completedAt}>{dateTime.format(point.timestamp)}</time>
               </div>
             }} />
-            <Line className="progress-results" data={progress.points} dataKey="seconds" name="Saved results" type="linear"
-              stroke="var(--gray-11)" strokeOpacity={0.25} strokeWidth={1} dot={false} activeDot={false} isAnimationActive={false} />
-            <Line className="progress-average" data={perfect} dataKey="averageSeconds" name="Average (10 perfect)" type="linear"
-              stroke="var(--accent-11)" strokeWidth={1.75} dot={false} activeDot={false} isAnimationActive={false} />
+            <Line className="progress-average-10" data={perfect} dataKey="averageSeconds" name="Average of 10" type="linear"
+              stroke="var(--accent-11)" strokeOpacity={0.38} strokeWidth={1.75}
+              dot={perfect.length === 1 ? { r: 3, className: 'progress-average-10-dot' } : false} activeDot={false} isAnimationActive={false} />
+            <Line className="progress-average-100" data={perfect} dataKey="average100Seconds" name="Average of 100" type="linear"
+              stroke="var(--accent-11)" strokeWidth={2.25}
+              dot={perfect.length === 1 ? { r: 3, className: 'progress-average-100-dot' } : false} activeDot={false} isAnimationActive={false} />
+            <Line className="progress-best" data={progress.points} dataKey="bestSeconds" name="Best time" type="stepAfter"
+              stroke="var(--gray-12)" strokeOpacity={0.9} strokeWidth={2}
+              dot={({ cx, cy, payload }) => payload.isRecord ? <Dot cx={cx} cy={cy} r={3} className="progress-best-dot" fill="var(--gray-12)" /> : <g />}
+              activeDot={false} isAnimationActive={false} />
             <Scatter className="progress-other" name="Partial / inaccurate" data={other} fill="var(--gray-11)" fillOpacity={0.4} isAnimationActive={false} />
-            <Scatter className="progress-perfect" name="Perfect" data={perfect} fill="var(--gray-12)" isAnimationActive={false} />
+            <Scatter className="progress-perfect" name="Perfect" data={perfect} fill="var(--accent-11)" fillOpacity={0.5} isAnimationActive={false} />
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <span id="progress-method" className="visually-hidden">Each point is a saved round at its completion date. Faint points are partial or inaccurate. The accent line is the trailing average of up to 10 perfect complete rounds for this exact order and factor set, using fewer rounds during warm-up. The faint line connects all saved rounds chronologically at their actual durations, including partial and inaccurate rounds. These connecting lines do not represent continuous observations. Dates use your local time zone. Identical timestamps retain saved order.</span>
+      <span id="progress-method" className="visually-hidden">Unconnected points are saved rounds at their completion dates; faint points are partial or inaccurate. The faded and stronger yellow lines are trailing averages of up to 10 and 100 perfect complete rounds respectively for this exact order and factor set, using fewer rounds during warm-up and never filling missing observations with zeros. The contrasting best-time staircase is the cumulative minimum perfect complete duration: it begins at the first eligible round and steps down only at a strictly faster round's actual timestamp. Dates use your local time zone. Identical timestamps retain saved order.</span>
       <div className="progress-data">
         <table className="score-table" aria-label="Progress data">
           <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Attempted</th><th scope="col">Accuracy</th><th scope="col">Duration</th></tr></thead>
