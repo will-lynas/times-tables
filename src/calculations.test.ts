@@ -1,12 +1,13 @@
 import { expect, test } from 'vitest'
 import { createGrid, scoreAnswers } from './game'
+import { historicalDetails } from './testFixtures/historicalCalculations'
 import { summarizeCalculations } from './calculations'
 import { loadScores, saveScores, recoverScores, SCORE_KEY, type Score } from './scores'
 
 export function detailedScore(id = 'detailed', factors = [6, 9], answers = ['36', '54', '0', '']): Score {
   const result = scoreAnswers(createGrid('ordered', Math.random, factors), answers)
   return { id, mode: 'ordered', size: factors.length, factors, status: result.status, attempted: result.attempted,
-    correct: result.correct, total: result.total, elapsedMs: 321, completedAt: '2026-01-02T12:00:00.000Z', calculations: result.calculations }
+    correct: result.correct, total: result.total, elapsedMs: 321, completedAt: '2026-01-02T12:00:00.000Z', calculations: historicalDetails(answers) }
 }
 export function memoryStorage() {
   const data = new Map<string, string>()
@@ -41,7 +42,12 @@ test('shuffled independent axes and raw factor ordering retain their actual disp
   const grid = { size: 2, rows: [9, 6], columns: [6, 9], products: [54, 81, 36, 54] }
   const result = scoreAnswers(grid, ['5', '81', '36', '54'])
   const score = { ...detailedScore(), mode: 'shuffled' as const, factors: [9, 6], status: result.status,
-    attempted: result.attempted, correct: result.correct, calculations: result.calculations }
+    attempted: result.attempted, correct: result.correct, calculations: { version: 1 as const, cells: [
+      { index: 0, rowIndex: 0, columnIndex: 0, row: 9, column: 6, answer: '5', product: 54, status: 'incorrect' as const },
+      { index: 1, rowIndex: 0, columnIndex: 1, row: 9, column: 9, answer: '81', product: 81, status: 'correct' as const },
+      { index: 2, rowIndex: 1, columnIndex: 0, row: 6, column: 6, answer: '36', product: 36, status: 'correct' as const },
+      { index: 3, rowIndex: 1, columnIndex: 1, row: 6, column: 9, answer: '54', product: 54, status: 'correct' as const },
+    ] } }
   const storage = memoryStorage()
   expect(await saveScores([score], () => storage)).toBeNull()
   expect(loadScores(() => storage).scores).toEqual([score])

@@ -1,7 +1,37 @@
 import { expect, test } from 'vitest'
-import { CalculationTimer } from './calculationTiming'
-import { createGrid, scoreAnswers } from './game'
+import { historicalTimedDetails } from './testFixtures/historicalCalculations'
 import { loadScores, saveScores, recoverScores, SCORE_KEY, type Score } from './scores'
+
+test('ordered historical intent replay followed by ordinary saves preserves every nested detail', async () => {
+  const store = storage()
+  const first = timed('first')
+  const historical = { ...first, unknown: { run: ['001'] }, calculations: { ...first.calculations!, unknown: { detail: [null] },
+    cells: first.calculations!.cells.map(cell => ({ ...cell, unknown: { exact: [cell.answer] } })),
+    timing: { ...first.calculations!.timing!, unknown: ['timing'], cells: first.calculations!.timing!.cells.map(cell => ({ ...cell, unknown: { keep: [false] } })) } } }
+  const raw = '  ' + JSON.stringify({ version: 4, scores: [historical], unknown: { envelope: [true] } }) + '\n'
+  store.setItem(SCORE_KEY, raw)
+  expect(loadScores(() => store).scores).toEqual([historical])
+  expect(store.getItem(SCORE_KEY)).toBe(raw)
+  const { calculations: _, ...ordinary } = timed('ordinary')
+  const next = timed('old-pending')
+  const failing = { ...store, get length() { return store.length }, setItem: (key: string, value: string) => {
+    if (key === SCORE_KEY) throw Error('Full')
+    store.setItem(key, value)
+  } }
+  expect(await saveScores([next], () => failing)).toMatch(/not saved/)
+  expect(await saveScores([ordinary], () => failing)).toMatch(/not saved/)
+  expect(store.getItem(SCORE_KEY)).toBe(raw)
+  const intents = Array.from({ length: store.length }, (_, index) => store.key(index)!).filter(key => key.includes('.intent.')).sort()
+  const bytes = intents.map(key => store.getItem(key))
+  expect(intents).toHaveLength(2)
+  expect(await recoverScores(() => store)).toBeNull()
+  expect(loadScores(() => store).scores).toEqual([historical, next, ordinary])
+  expect(JSON.parse(store.getItem(SCORE_KEY)!).unknown).toEqual({ envelope: [true] })
+  expect(intents.map(key => store.getItem(key))).toEqual(bytes)
+  const committed = store.getItem(SCORE_KEY)
+  expect(await recoverScores(() => store)).toBeNull()
+  expect(store.getItem(SCORE_KEY)).toBe(committed)
+})
 
 function storage() {
   const data = new Map<string, string>()
@@ -9,11 +39,8 @@ function storage() {
     getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => { data.set(key, value) } }
 }
 function timed(id = 'new'): Score {
-  const result = scoreAnswers(createGrid('ordered', Math.random, [6, 9]), ['36', '', '', ''])
-  const timer = new CalculationTimer(4, 0, true)
-  timer.edit(0, '36', 0)
   return { id, mode: 'ordered', factors: [6, 9], size: 2, correct: 1, attempted: 1, total: 4, status: 'partial', elapsedMs: 100,
-    completedAt: '2026-01-01T00:00:00Z', calculations: { ...result.calculations, timing: timer.snapshot(100) } }
+    completedAt: '2026-01-01T00:00:00Z', calculations: historicalTimedDetails() }
 }
 
 test.each([

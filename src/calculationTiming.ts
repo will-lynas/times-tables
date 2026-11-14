@@ -50,48 +50,4 @@ export function validTiming(value: unknown, outcomes: readonly CalculationCell[]
 export type CellTiming = { index: number; answerEntryMs: number | null; focusedMs: number; visits: number; edits: number }
 export type CalculationTiming = { version: 1; cells: CellTiming[] }
 
-// One event-driven collector per actual start; no React effect owns its lifetime.
-export class CalculationTimer {
-  private cells: CellTiming[]
-  private focused: number | null = 0
-  private since: number
-  private active: boolean
-  private stopped = false
-  constructor(count: number, now: number, active: boolean) {
-    this.cells = Array.from({ length: count }, (_, index) => ({ index, answerEntryMs: null, focusedMs: 0, visits: index === 0 ? 1 : 0, edits: 0 }))
-    this.since = now
-    this.active = active
-  }
-  private tick(now: number) {
-    if (!this.stopped && this.active && this.focused !== null) this.cells[this.focused].focusedMs += Math.max(0, now - this.since)
-    this.since = now
-  }
-  focus(index: number, now: number) {
-    if (this.stopped) return
-    this.tick(now)
-    if (this.focused !== index) this.cells[index].visits++
-    this.focused = index
-  }
-  blur(now: number) {
-    if (this.stopped) return
-    this.tick(now)
-    this.focused = null
-  }
-  setActive(active: boolean, now: number) {
-    if (this.stopped) return
-    this.tick(now)
-    this.active = active
-  }
-  edit(index: number, value: string, now: number) {
-    if (this.stopped) return
-    this.tick(now)
-    const cell = this.cells[index]
-    cell.edits++
-    cell.answerEntryMs = value === '' ? null : cell.focusedMs
-  }
-  snapshot(now: number): CalculationTiming {
-    this.tick(now)
-    this.stopped = true
-    return { version: 1, cells: this.cells.map(cell => ({ ...cell })) }
-  }
-}
+// Historical compatibility only. No timing collector is created by current gameplay.

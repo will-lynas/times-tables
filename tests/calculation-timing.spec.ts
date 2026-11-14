@@ -14,7 +14,7 @@ async function seed(page: Page) {
 async function at(page: Page, now: number) { await page.evaluate(now => { Object.assign(window, { timingNow: now }) }, now) }
 async function scores(page: Page) { return page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores') ?? '{"scores":[]}').scores) }
 
-test('final edits, revisits, clear, skips and finish wait produce exact durable active-focus checkpoints', async ({ page }) => {
+test('final edits, revisits, clear, skips and finish wait save only ordinary results', async ({ page }) => {
   await seed(page)
   await page.keyboard.down('7')
   const fields = page.getByRole('textbox')
@@ -27,7 +27,7 @@ test('final edits, revisits, clear, skips and finish wait produce exact durable 
   await at(page, 700); await fields.nth(1).focus()
   await at(page, 1000); await fields.nth(1).fill('54')
   await at(page, 1100); await fields.first().focus()
-  await at(page, 1300); await fields.nth(2).focus() // unedited revisit must not replace 500ms checkpoint
+  await at(page, 1300); await fields.nth(2).focus()
   await at(page, 1500); await fields.nth(2).fill('5')
   await at(page, 1600); await fields.nth(2).fill('')
   await at(page, 1800); await fields.nth(2).fill('54')
@@ -35,17 +35,13 @@ test('final edits, revisits, clear, skips and finish wait produce exact durable 
   await expect(page.getByRole('region', { name: 'Round result' })).toBeVisible()
   const [score] = await scores(page)
   expect(score.elapsedMs).toBe(2700)
-  expect(score.calculations.timing).toEqual({ version: 1, cells: [
-    { index: 0, answerEntryMs: 500, focusedMs: 800, visits: 2, edits: 2 },
-    { index: 1, answerEntryMs: 300, focusedMs: 400, visits: 1, edits: 1 },
-    { index: 2, answerEntryMs: 500, focusedMs: 1500, visits: 1, edits: 3 },
-    { index: 3, answerEntryMs: null, focusedMs: 0, visits: 0, edits: 0 },
-  ] })
+  expect(score).toMatchObject({ status: 'partial', attempted: 3, correct: 3, total: 4 })
+  expect(score).not.toHaveProperty('calculations')
   await page.reload()
   expect((await scores(page))[0]).toEqual(score)
 })
 
-test('hidden, window blur and offroute time pause only cell timing; route return and edited revisits resume', async ({ page }) => {
+test('hidden, window blur and offroute time preserve whole-run elapsed and edited answers without cell capture', async ({ page }) => {
   await seed(page)
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await at(page, 200)
@@ -65,10 +61,11 @@ test('hidden, window blur and offroute time pause only cell timing; route return
   await expect(page.getByRole('region', { name: 'Round result' })).toBeVisible()
   const [score] = await scores(page)
   expect(score.elapsedMs).toBe(5900)
-  expect(score.calculations.timing.cells[0]).toEqual({ index: 0, answerEntryMs: 800, focusedMs: 900, visits: 2, edits: 2 })
+  expect(score).toMatchObject({ status: 'partial', attempted: 1, correct: 1 })
+  expect(score).not.toHaveProperty('calculations')
 })
 
-test('zero-duration entry is measured, cleared and unedited cells are null, cancel resets collection', async ({ page }) => {
+test('zero-duration runs, cleared answers and cancel/retry do not collect cell details', async ({ page }) => {
   await seed(page)
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await page.getByRole('textbox').first().fill('36')
@@ -82,11 +79,11 @@ test('zero-duration entry is measured, cleared and unedited cells are null, canc
   await page.keyboard.press('Shift+Enter')
   await expect(page.getByRole('region', { name: 'Round result' })).toBeVisible()
   const [score] = await scores(page)
-  expect(score.calculations.timing.cells.map((cell: { answerEntryMs: number | null }) => cell.answerEntryMs)).toEqual([0, null, null, null])
-  expect(score.calculations.timing.cells[0].edits).toBe(1)
+  expect(score).toMatchObject({ elapsedMs: 0, status: 'partial', attempted: 1, correct: 1 })
+  expect(score).not.toHaveProperty('calculations')
 })
 
-for (const close of [false, true]) test(`timed immutable intent survives immediate ${close ? 'tab close' : 'reload'} under a held score lock`, async ({ page, context }) => {
+for (const close of [false, true]) test(`ordinary immutable intent survives immediate ${close ? 'tab close' : 'reload'} under a held score lock`, async ({ page, context }) => {
   await seed(page)
   const holder = await context.newPage()
   await holder.goto('/')
@@ -106,10 +103,11 @@ for (const close of [false, true]) test(`timed immutable intent survives immedia
     return { key, raw: localStorage.getItem(key)!, primary: localStorage.getItem('times-tables.scores') }
   })
   expect(pending.primary).toBeNull()
-  expect(JSON.parse(pending.raw).payload[0].calculations.timing.cells[0]).toEqual({ index: 0, answerEntryMs: 300, focusedMs: 500, visits: 1, edits: 1 })
+  expect(JSON.parse(pending.raw).payload[0]).toMatchObject({ elapsedMs: 500, status: 'partial', attempted: 1, correct: 1 })
+  expect(JSON.parse(pending.raw).payload[0]).not.toHaveProperty('calculations')
   await holder.evaluate(() => (window as unknown as { releaseTimingLock: () => void }).releaseTimingLock())
   const recovered = close ? await context.newPage() : page
-  if (close) await recovered.goto('/calculations')
+  if (close) await recovered.goto('/stats')
   else await recovered.getByRole('link', { name: 'Stats', exact: true }).click()
   await expect.poll(async () => (await scores(recovered)).length).toBe(1)
   expect((await scores(recovered))[0]).toEqual(JSON.parse(pending.raw).payload[0])
@@ -117,7 +115,7 @@ for (const close of [false, true]) test(`timed immutable intent survives immedia
   await holder.close()
 })
 
-test('timing analytics remain committed-only while saving, then appear without a second timing write', async ({ page, context }) => {
+test('ordinary save keeps selection locked until settlement with only one score intent', async ({ page, context }) => {
   await seed(page)
   const holder = await context.newPage()
   await holder.goto('/')
@@ -132,19 +130,17 @@ test('timing analytics remain committed-only while saving, then appear without a
   await page.keyboard.press('Shift+Enter')
   await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await expect(page.getByRole('combobox', { name: 'Stats size', exact: true })).toBeDisabled()
-  await page.getByRole('link', { name: 'Calculations', exact: true }).click()
-  await page.getByRole('radio', { name: 'Times', exact: true }).click()
-  await expect(page.getByText('No answer-entry timings yet.')).toBeVisible()
-  await expect(page.getByRole('group', { name: 'Stats settings' })).toHaveCount(0)
+  expect(await scores(page)).toEqual([])
   await holder.evaluate(() => (window as unknown as { releaseTimingLock: () => void }).releaseTimingLock())
-  await expect(page.getByRole('table', { name: 'Slow calculations', exact: true })).toContainText('0.3 s')
-  await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await expect(page.getByRole('combobox', { name: 'Stats size', exact: true })).toBeEnabled()
+  const [score] = await scores(page)
+  expect(score).toMatchObject({ status: 'partial', attempted: 1, correct: 1 })
+  expect(score).not.toHaveProperty('calculations')
   expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('times-tables.scores.intent.')).length)).toBe(1)
   await holder.close()
 })
 
-test('stale cooperating tabs preserve each timing array and duplicate finish journals only once', async ({ page, context }) => {
+test('stale cooperating tabs preserve ordinary scores and duplicate finish journals only once', async ({ page, context }) => {
   await seed(page)
   const second = await context.newPage()
   await seed(second)
@@ -160,7 +156,10 @@ test('stale cooperating tabs preserve each timing array and duplicate finish jou
   const saved = await scores(page)
   expect(saved).toHaveLength(2)
   expect(new Set(saved.map((score: { id: string }) => score.id)).size).toBe(2)
-  for (const score of saved) expect(score.calculations.timing.cells[0]).toEqual({ index: 0, answerEntryMs: 100, focusedMs: 300, visits: 1, edits: 1 })
+  for (const score of saved) {
+    expect(score).toMatchObject({ elapsedMs: 300, status: 'partial', attempted: 1, correct: 1 })
+    expect(score).not.toHaveProperty('calculations')
+  }
   expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('times-tables.scores.intent.')).length)).toBe(2)
   await second.close()
 })
@@ -188,10 +187,7 @@ test('Tab, reverse Tab, arrows, optional Space and last-cell boundary retain foc
   expect(await scores(page)).toEqual([])
   await at(page, 4000); await page.keyboard.press('Shift+Enter')
   await expect(page.getByRole('region', { name: 'Round result' })).toBeVisible()
-  expect((await scores(page))[0].calculations.timing.cells).toEqual([
-    { index: 0, answerEntryMs: 100, focusedMs: 300, visits: 2, edits: 1 },
-    { index: 1, answerEntryMs: 100, focusedMs: 200, visits: 1, edits: 1 },
-    { index: 2, answerEntryMs: 100, focusedMs: 300, visits: 1, edits: 1 },
-    { index: 3, answerEntryMs: 100, focusedMs: 3100, visits: 1, edits: 1 },
-  ])
+  const [score] = await scores(page)
+  expect(score).toMatchObject({ elapsedMs: 3900, status: 'complete', attempted: 4, correct: 4 })
+  expect(score).not.toHaveProperty('calculations')
 })

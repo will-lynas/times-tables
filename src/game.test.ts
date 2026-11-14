@@ -1,6 +1,16 @@
 import { expect, test } from 'vitest'
 import { createGrid, scoreAnswers } from './game'
 
+test.each(['ordered', 'shuffled'] as const)('retired collection keeps only aggregate grading and result matches for %s custom sets', mode => {
+  const grid = createGrid(mode, () => 0.2, [6, 9])
+  for (const partial of [false, true]) {
+    const answers = grid.products.map((product, index) => partial && index > 1 ? '' : String(product).padStart(3, '0'))
+    const result = scoreAnswers(grid, answers)
+    expect(Object.keys(result).sort()).toEqual(['accuracy', 'attempted', 'correct', 'matches', 'status', 'total'])
+    expect(result).toMatchObject({ status: partial ? 'partial' : 'complete', accuracy: 100, attempted: partial ? 2 : 4, correct: partial ? 2 : 4, total: 4 })
+  }
+})
+
 test.each(['  ', '1e0', '-1', '1.0', 'abc'])('refuses an invalid answer: %j', answer => {
   const grid = createGrid('ordered')
   const answers = grid.products.map(String)
@@ -15,7 +25,7 @@ test('grades only attempted answers and leaves blanks ungraded', () => {
   answers[1] = '0'
   expect(scoreAnswers(grid, answers)).toEqual({
     status: 'partial', correct: 1, attempted: 2, total: 144, accuracy: 50,
-    matches: [true, false, ...Array(142).fill(null)], calculations: expect.objectContaining({ version: 1 }),
+    matches: [true, false, ...Array(142).fill(null)],
   })
 })
 
@@ -30,7 +40,7 @@ test('refuses a partial answer list', () => {
 test('grades a smaller grid using its actual total and attempted denominator', () => {
   const grid = createGrid('ordered', Math.random, 2)
   expect(scoreAnswers(grid, ['0', '', '', ''])).toEqual({
-    status: 'partial', correct: 0, attempted: 1, total: 4, accuracy: 0, matches: [false, null, null, null], calculations: expect.objectContaining({ version: 1 }),
+    status: 'partial', correct: 0, attempted: 1, total: 4, accuracy: 0, matches: [false, null, null, null],
   })
   expect(scoreAnswers(grid, ['1', '2', '2', '4'])).toMatchObject({
     status: 'complete', correct: 4, attempted: 4, total: 4, accuracy: 100,
@@ -71,7 +81,7 @@ test.each(Array.from({ length: 11 }, (_, index) => index + 2))('creates and scor
   expect(grid.columns).toEqual(headers)
   expect(grid.products).toEqual(headers.flatMap(row => headers.map(column => row * column)))
   expect(scoreAnswers(grid, grid.products.map(String))).toEqual({
-    status: 'complete', attempted: size * size, correct: size * size, total: size * size, accuracy: 100, matches: Array(size * size).fill(true), calculations: expect.objectContaining({ version: 1 }),
+    status: 'complete', attempted: size * size, correct: size * size, total: size * size, accuracy: 100, matches: Array(size * size).fill(true),
   })
 })
 

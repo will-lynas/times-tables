@@ -1,12 +1,13 @@
 import { expect, test } from 'vitest'
 import { summarizeTiming } from './calculationTiming'
 import { createGrid, scoreAnswers } from './game'
+import { historicalDetails } from './testFixtures/historicalCalculations'
 import type { Score } from './scores'
 
 function run(id: string, durations: number[], answers = ['36', '54', '54', '81']): Score {
   const result = scoreAnswers(createGrid('ordered', Math.random, [6, 9]), answers)
   return { id, factors: [6, 9], size: 2, mode: 'ordered', correct: result.correct, attempted: result.attempted, total: 4, status: result.status,
-    elapsedMs: 9999999, completedAt: '2026-01-01T00:00:00Z', calculations: { ...result.calculations, timing: { version: 1,
+    elapsedMs: 9999999, completedAt: '2026-01-01T00:00:00Z', calculations: { ...historicalDetails(answers), timing: { version: 1,
       cells: durations.map((duration, index) => ({ index, answerEntryMs: answers[index] === '' ? null : duration, focusedMs: duration, visits: 1, edits: 1 })) } } }
 }
 
