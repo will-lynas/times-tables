@@ -138,7 +138,7 @@ test('compact chart key independently toggles complete derived series without ch
   }
   await graph.locator('.progress-perfect .recharts-scatter-symbol').last().hover()
   await expect(graph.locator('.progress-tooltip-duration')).toHaveText('0s')
-  await expect(graph.locator('.progress-tooltip dt')).toHaveText(['Accuracy', 'Answered'])
+  await expect(graph.locator('.progress-tooltip dt')).toHaveText(['Run', 'Accuracy', 'Answered'])
   for (const s of series) await graph.getByRole('button', { name: s.name, exact: true }).click()
   for (const s of series) await expect(graph.locator(`${s.selector} .recharts-line-curve[d]`)).toHaveCount(1)
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(scores)
