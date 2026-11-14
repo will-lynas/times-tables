@@ -50,7 +50,7 @@ test('all committed error and timing history combines identical operands across 
     localStorage.setItem('times-tables.settings', JSON.stringify({ version: 1, mode: 'ordered', size: 2, choice: 'preset', customFactors: [6, 9], unknown: ['keep'] }))
     localStorage.setItem('times-tables.progress', ' {"version":1,"mode":"ordered","size":2,"axisMode":"runs","unknown":["keep"]}\n')
   }, raw)
-  await page.goto('/stats/calculations')
+  await page.goto('/calculations')
   const progress = await page.evaluate(() => localStorage.getItem('times-tables.progress'))
   const baseline = await snapshot(page)
   for (const selection of [
@@ -61,9 +61,7 @@ test('all committed error and timing history combines identical operands across 
     { mode: 'ordered', size: '2', ids: ['preset', 'untimed', 'legacy'] },
   ]) {
     await page.getByRole('link', { name: 'Stats', exact: true }).click()
-    // Works on the old nested route until the independent navigation release lands.
-    const overview = page.getByRole('link', { name: 'Overview', exact: true })
-    if (await overview.isVisible()) await overview.click()
+
     await chooseFilter(page.getByRole('radiogroup', { name: 'Stats order', exact: true }), selection.mode)
     await chooseFilter(page.getByRole('combobox', { name: 'Stats size', exact: true }), selection.size)
     expect(await page.locator('table[aria-label="Score history"] tbody tr').evaluateAll(rows => rows.map(row => row.getAttribute('data-score-id')))).toEqual(selection.ids)

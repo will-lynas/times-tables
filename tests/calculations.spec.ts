@@ -1,5 +1,4 @@
 import { expect, test, type Page } from '@playwright/test'
-import { chooseFilter } from './helpers'
 import type { Score } from '../src/scores'
 
 function fixture(id: string, factors = [6, 9], answers = ['36', '54', '0', ''], mode: Score['mode'] = 'ordered'): Score {
@@ -57,10 +56,8 @@ test('coverage across all settings and directional counts use final detailed ans
     fixture('shuffled', [6, 9], ['0', '0', '0', '0'], 'shuffled')]
   await page.addInitScript(scores => { if (!localStorage.getItem('times-tables.scores')) localStorage.setItem('times-tables.scores', JSON.stringify({ version: 4, scores })) }, scores)
   await seed(page)
-  await page.goto('/stats/calculations')
-  // Shared selection from Practice, not an independently persisted analytics filter.
-  await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeChecked()
-  await chooseFilter(page.getByRole('combobox', { name: 'Stats size', exact: true }), 'set:6,9')
+  await page.goto('/calculations')
+  await expect(page.getByRole('group', { name: 'Stats settings' })).toHaveCount(0)
   const table = page.getByRole('table', { name: 'Incorrect calculations' })
   await expect(page.getByText('Detail coverage: 5 / 6 runs · 17 answered')).toBeVisible()
   const rows = table.getByRole('row')
@@ -74,7 +71,7 @@ test('coverage across all settings and directional counts use final detailed ans
   await rows.nth(1).getByText('Answers', { exact: true }).click()
   await expect(rows.nth(1)).toContainText('Correct: 54')
   await expect(rows.nth(1)).toContainText('0 (3)')
-  await page.getByRole('link', { name: 'Overview', exact: true }).click()
+  await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await page.goBack()
   await expect(table).toBeVisible()
   await page.goForward()
@@ -103,7 +100,7 @@ test('shuffled axes are captured as displayed and synchronous repeated submissio
   expect(scores[0].calculations.cells.map((cell: { row: number; column: number }) => `${cell.row} × ${cell.column}`)).toEqual(labels)
   expect(await page.evaluate(() => (window as unknown as { scoreWrites: () => number }).scoreWrites())).toBe(1)
   expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('times-tables.scores.intent.')).length)).toBe(1)
-  await page.goto('/stats/calculations')
+  await page.goto('/calculations')
   await expect(page.getByText('No incorrect answers in recorded details.')).toBeVisible()
 })
 
@@ -117,7 +114,7 @@ test('empty, invalid and cancelled rounds create no detailed submitted records',
   await page.getByRole('textbox').first().fill('0')
   await page.keyboard.press('Escape')
   expect(await readScores(page)).toEqual([])
-  await page.goto('/stats/calculations')
+  await page.goto('/calculations')
   await expect(page.getByText('Detail coverage: 0 / 0 runs · 0 answered')).toBeVisible()
   await expect(page.getByText('No calculation details yet.')).toBeVisible()
 })
@@ -139,7 +136,7 @@ for (const close of [false, true]) test(`detailed intent survives immediate ${cl
   else await page.reload({ waitUntil: 'commit' })
   await holder.evaluate(() => (window as unknown as { releaseScoreLock: () => void }).releaseScoreLock())
   const recovered = close ? await context.newPage() : page
-  if (close) await recovered.goto('/stats/calculations')
+  if (close) await recovered.goto('/calculations')
   else await recovered.getByRole('link', { name: 'Stats', exact: true }).click()
   if (!close) await recovered.getByRole('link', { name: 'Calculations', exact: true }).click()
   await expect.poll(async () => (await readScores(recovered)).length).toBe(1)
@@ -208,7 +205,7 @@ test('stale cooperating tabs union detailed submissions without losing either ru
   expect(scores).toHaveLength(2)
   expect(new Set(scores.map((score: Score) => score.id)).size).toBe(2)
   expect(scores.every((score: Score) => score.calculations!.cells[2].answer === '0')).toBe(true)
-  await page.goto('/stats/calculations')
+  await page.goto('/calculations')
   await expect(page.getByText('Detail coverage: 2 / 2 runs · 2 answered')).toBeVisible()
   const cells = page.getByRole('table', { name: 'Incorrect calculations' }).getByRole('row').nth(1).getByRole('cell')
   await expect(cells.nth(0)).toHaveText('2')
@@ -227,7 +224,7 @@ for (const theme of ['dark', 'light']) for (const width of [1024, 1440]) test(`c
   page.on('console', message => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()) })
   await page.setViewportSize({ width, height: 1000 })
   await seed(page)
-  await page.goto('/stats/calculations')
+  await page.goto('/calculations')
   const table = page.getByRole('table', { name: 'Incorrect calculations' })
   await expect(table).toBeVisible()
   await table.getByLabel('Incorrect answers for 9 × 6', { exact: true }).click()

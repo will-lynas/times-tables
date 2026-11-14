@@ -19,7 +19,7 @@ async function seed(page: Page, theme = 'dark') {
     if (!localStorage.getItem('times-tables.settings')) localStorage.setItem('times-tables.settings', JSON.stringify({ version: 1, mode: 'ordered', size: 2, choice: 'custom', customFactors: [6, 9] }))
     localStorage.setItem('times-tables.theme', theme)
   }, { theme, scores: [a, b, c, d, old, { ...aggregate, id: 'legacy' }, different] })
-  await page.goto('/stats/calculations')
+  await page.goto('/calculations')
 }
 
 test('Times ranks correct medians, plots all samples, keeps reversed pairs and exposes precise keyboard detail', async ({ page }) => {
@@ -92,7 +92,7 @@ test('missing and no-correct observations remain honest without manufacturing ze
 })
 
 test('empty Times view has no inferred samples', async ({ page }) => {
-  await page.goto('/stats/calculations')
+  await page.goto('/calculations')
   await page.getByRole('radio', { name: 'Times', exact: true }).click()
   await expect(page.getByText('No answer-entry timings yet.')).toBeVisible()
   await expect(page.getByText('Timing coverage: 0 / 0 runs · 0 measured answers · 0 missing')).toBeVisible()
