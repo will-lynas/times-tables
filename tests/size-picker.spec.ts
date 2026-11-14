@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 import { chooseGridSize } from './helpers'
 
 // These also guard the existing Radix dismissal and gameplay lock behavior.
-test('supports Tab and outside dismissal, then stays locked until the round resets', async ({ page }) => {
+test('supports Tab and outside dismissal, stays locked during play and unlocks after save', async ({ page }) => {
   await page.goto('/')
   const trigger = page.getByRole('button', { name: 'Grid size', exact: true })
   const panel = page.getByRole('dialog', { name: 'Grid size options', exact: true })
@@ -20,7 +20,8 @@ test('supports Tab and outside dismissal, then stays locked until the round rese
   await expect(trigger).toBeDisabled()
   await page.getByRole('textbox').first().fill('1')
   await page.getByRole('button', { name: 'Finish early', exact: true }).click()
-  await expect(trigger).toBeDisabled()
+  await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
+  await expect(trigger).toBeEnabled()
   await expect(panel).toHaveCount(0)
   await page.getByRole('button', { name: 'New round', exact: true }).click()
   await expect(trigger).toBeEnabled()
