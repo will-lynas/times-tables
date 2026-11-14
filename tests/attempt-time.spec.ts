@@ -15,7 +15,9 @@ const records = [
 
 async function seed(page: Page) {
   await page.clock.install({ time: now })
-  await page.clock.pauseAt(now)
+  // Pause ahead of installation latency, before mounting any application timers.
+  await page.clock.pauseAt(now + 60000)
+  await page.clock.setSystemTime(now)
   await page.addInitScript(records => {
     if (localStorage.getItem('attempt-time-seeded')) return
     localStorage.setItem('times-tables.settings', JSON.stringify({ mode: 'ordered', size: 2, scoreMode: 'all', scoreSize: 'all' }))
