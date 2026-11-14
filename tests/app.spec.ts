@@ -70,7 +70,7 @@ test('supports numeric editing and keyboard navigation without submitting', asyn
   await cells.nth(0).pressSequentially('a-1.2e')
   await expect(cells.nth(0)).toHaveValue('12')
   await expect(page.getByText('1 / 144 filled', { exact: true })).toBeVisible()
-  await cells.nth(0).press('Space')
+  await cells.nth(0).press('Tab')
   await expect(cells.nth(1)).toBeFocused()
   await cells.nth(1).press('Tab')
   await expect(cells.nth(2)).toBeFocused()

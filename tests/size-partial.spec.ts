@@ -13,7 +13,7 @@ test('small partial rounds retain keyboard controls and size-specific records af
   await expect(cells).toHaveCount(4)
   await expect(size).toBeDisabled()
   await cells.nth(0).fill('1')
-  await cells.nth(0).press('Space')
+  await cells.nth(0).press('Tab')
   await expect(cells.nth(1)).toBeFocused()
   await cells.nth(1).press('ArrowRight')
   await expect(cells.nth(1)).toBeFocused()

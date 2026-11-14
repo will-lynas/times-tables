@@ -46,7 +46,7 @@ test('cancel discards a running round without changing saved scores', async ({ p
   await expect(cells.first()).toBeFocused()
   await expect(cells.first()).toHaveValue('')
   await cells.first().fill('1')
-  await cells.first().press('Space')
+  await cells.first().press('Tab')
   await expect(cells.nth(1)).toBeFocused()
   await page.clock.runFor(1000)
   await expect(page.getByRole('timer')).toHaveText('0:01.0')

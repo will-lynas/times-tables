@@ -15,13 +15,13 @@ for (const key of ['Enter', 'Space']) {
     const grid = page.getByRole('table', { name: 'Multiplication grid' })
     const headers = await grid.getByRole('columnheader').allTextContents()
     await cells.first().fill('12')
-    await cells.first().press('Space')
+    await cells.first().press('Tab')
     await expect(cells.nth(1)).toBeFocused()
     await page.locator('body').click({ position: { x: 8, y: 8 } })
     await page.keyboard.press(key)
     await expect(cells.first()).toHaveValue('12')
     await expect(grid.getByRole('columnheader')).toHaveText(headers)
-    await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toHaveCount(key === 'Enter' ? 1 : 0)
+    await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toHaveCount(0)
   })
 }
 
@@ -107,14 +107,14 @@ test('does not start behind an open popup but ignores closed popups', async ({ p
   await expect(page.getByRole('textbox').first()).toBeFocused()
 })
 
-test('Space advances during a round without inserting text or scrolling and clamps at the last cell', async ({ page }) => {
+test('Space stays in the answer without inserting text or scrolling, including the last cell', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 800 })
   await page.goto('/')
   await page.keyboard.press('Enter')
   const cells = page.getByRole('textbox')
   await cells.first().fill('12')
   await cells.first().press('Space')
-  await expect(cells.nth(1)).toBeFocused()
+  await expect(cells.first()).toBeFocused()
   await expect(cells.first()).toHaveValue('12')
   await expect(cells.nth(1)).toHaveValue('')
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)

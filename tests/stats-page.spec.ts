@@ -55,6 +55,7 @@ test('Stats preserves elapsed running time and never handles practice shortcuts'
   await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await page.locator('body').click({ position: { x: 8, y: 8 } })
   await page.keyboard.press('Enter')
+  await page.keyboard.press('Shift+Enter')
   await page.keyboard.press('Space')
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)

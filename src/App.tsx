@@ -179,7 +179,7 @@ export default function App() {
   useEffect(() => {
     if (!running || page !== 'practice') return
     function handleFinishKey(event: globalThis.KeyboardEvent) {
-      if (event.key !== 'Enter' || event.defaultPrevented || event.repeat || event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+      if (event.key !== 'Enter' || event.defaultPrevented || event.repeat || event.isComposing || event.keyCode === 229 || event.altKey || event.ctrlKey || event.metaKey || !event.shiftKey) return
       const answerField = inputs.current.some(input => input !== null && input === event.target)
       if (!answerField && event.target instanceof Element && event.target.closest('button, a[href], input, textarea, select, summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="combobox"], [tabindex]')) return
       const popups = document.querySelectorAll('dialog[open], :popover-open, [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')
@@ -192,10 +192,15 @@ export default function App() {
   }, [startedAt, grid, answers, history, mode, size, page])
 
   function navigate(event: KeyboardEvent<HTMLInputElement>, index: number) {
+    if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || event.defaultPrevented) return
     if (event.altKey || event.ctrlKey || event.metaKey) return
+    if (event.key === 'Enter' || event.key === ' ') {
+      // Never let an answer field activate a form or move on accidentally.
+      if (!(event.key === 'Enter' && event.shiftKey)) event.preventDefault()
+      return
+    }
     const column = index % size
     const target = {
-      ' ': Math.min(index + 1, total - 1),
       ArrowRight: column < size - 1 ? index + 1 : index,
       ArrowLeft: column > 0 ? index - 1 : index,
       ArrowDown: index < total - size ? index + size : index,
@@ -286,8 +291,8 @@ export default function App() {
       </div>}
       </div>
       <div className="grid-footer">
-        <p>{running ? 'Enter finish · Space / Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit' : null}</p>
-        {!result && <Button disabled={!running || filled === 0} onClick={finish} aria-keyshortcuts="Enter">{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
+        <p>{running ? 'Shift + Enter finish · Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit' : null}</p>
+        {!result && <Button type="button" disabled={!running || filled === 0} onClick={finish} aria-keyshortcuts="Shift+Enter">{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
       </div>
 
       </div>

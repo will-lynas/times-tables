@@ -13,12 +13,12 @@ async function savedScores(page: Page) {
   return page.evaluate(key => JSON.parse(localStorage.getItem(key) ?? '{"scores":[]}').scores, SCORE_KEY)
 }
 
-test('Enter on the page finishes a full grid once, then a new round still starts with Enter', async ({ page }) => {
+test('Shift+Enter on the page finishes a full grid once, then a new round still starts with Enter', async ({ page }) => {
   await startSmall(page)
   const cells = page.getByRole('textbox')
   for (const [index, value] of ['1', '2', '2', '4'].entries()) await cells.nth(index).fill(value)
   await page.locator('body').click({ position: { x: 8, y: 8 } })
-  await page.keyboard.press('Enter')
+  await page.keyboard.press('Shift+Enter')
   await expect(page.getByRole('heading', { name: 'Round complete', exact: true })).toBeVisible()
   await expect(page.getByText('4 / 4 correct', { exact: true })).toBeVisible()
   const history = page.getByRole('table', { name: 'Score history', exact: true })
@@ -46,11 +46,11 @@ test('ignores repeated, modified, composing and already-handled Enter without mo
   const cell = page.getByRole('textbox').first()
   await cell.fill('1')
   for (const target of ['cell', 'page']) {
-    for (const flag of ['repeat', 'altKey', 'ctrlKey', 'metaKey', 'shiftKey', 'isComposing', 'keyCode', 'defaultPrevented']) {
+    for (const flag of ['repeat', 'altKey', 'ctrlKey', 'metaKey', 'isComposing', 'keyCode', 'defaultPrevented']) {
       await cell.focus()
       const prevented = await page.evaluate(({ target, flag }) => {
         const event = new KeyboardEvent('keydown', {
-          key: 'Enter', [flag]: flag === 'keyCode' ? 229 : true, bubbles: true, cancelable: true,
+          key: 'Enter', shiftKey: true, [flag]: flag === 'keyCode' ? 229 : true, bubbles: true, cancelable: true,
         })
         if (flag === 'defaultPrevented') event.preventDefault()
         ;(target === 'cell' ? document.querySelector('td input')! : document.body).dispatchEvent(event)
@@ -63,7 +63,7 @@ test('ignores repeated, modified, composing and already-handled Enter without mo
       expect(await savedScores(page)).toEqual([])
     }
   }
-  await cell.press('Enter')
+  await cell.press('Shift+Enter')
   await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
 })
 
@@ -84,7 +84,7 @@ test('leaves buttons, links, settings and history filters to their native Enter 
       const fixture = document.createElement('div')
       fixture.innerHTML = html
       document.body.append(fixture)
-      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+      const event = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true })
       ;(fixture.querySelector('span, summary') ?? fixture.firstElementChild!).dispatchEvent(event)
       fixture.remove()
       return event.defaultPrevented
@@ -100,7 +100,7 @@ test('leaves buttons, links, settings and history filters to their native Enter 
   expect(await savedScores(page)).toHaveLength(1)
 })
 
-test('synchronous duplicate Enter and Finish events persist exactly once', async ({ page }) => {
+test('synchronous duplicate Shift+Enter and Finish events persist exactly once', async ({ page }) => {
   await startSmall(page)
   await page.getByRole('textbox').first().fill('1')
   const writes = await page.evaluate(key => {
@@ -114,7 +114,7 @@ test('synchronous duplicate Enter and Finish events persist exactly once', async
       const cell = document.querySelector('td input')!
       const finish = Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Finish early')!
       for (let index = 0; index < 2; index++) {
-        cell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+        cell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }))
       }
       finish.click()
       return writes
@@ -129,11 +129,11 @@ test('synchronous duplicate Enter and Finish events persist exactly once', async
   await page.getByRole('button', { name: 'New round', exact: true }).click()
   await page.keyboard.press('Enter')
   await page.getByRole('textbox').first().fill('2')
-  await page.keyboard.press('Enter')
+  await page.keyboard.press('Shift+Enter')
   expect(await savedScores(page)).toHaveLength(2)
 })
 
-test('does not finish behind a visible popup but allows Enter after it closes', async ({ page }) => {
+test('does not finish behind a visible popup but allows Shift+Enter after it closes', async ({ page }) => {
   await startSmall(page)
   await page.getByRole('textbox').first().fill('1')
   for (const html of [
@@ -147,7 +147,7 @@ test('does not finish behind a visible popup but allows Enter after it closes', 
       document.body.append(fixture)
       const popup = fixture.firstElementChild as HTMLElement
       if (popup.hasAttribute('popover')) popup.showPopover()
-      const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+      const event = new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true })
       document.body.dispatchEvent(event)
       fixture.remove()
       return event.defaultPrevented
@@ -162,15 +162,15 @@ test('does not finish behind a visible popup but allows Enter after it closes', 
     document.body.append(closed)
   })
   await page.locator('body').click({ position: { x: 8, y: 8 } })
-  await page.keyboard.press('Enter')
+  await page.keyboard.press('Shift+Enter')
   await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
 })
 
-test('Enter completion keeps history filters independent and persists round settings across refresh', async ({ page }) => {
+test('Shift+Enter completion keeps history filters independent and persists round settings across refresh', async ({ page }) => {
   await startSmall(page)
   const cells = page.getByRole('textbox')
   for (const [index, value] of ['1', '2', '2', '4'].entries()) await cells.nth(index).fill(value)
-  await cells.last().press('Enter')
+  await cells.last().press('Shift+Enter')
   const original = await savedScores(page)
   await page.getByRole('button', { name: 'New round', exact: true }).click()
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
@@ -195,7 +195,7 @@ test('Enter completion keeps history filters independent and persists round sett
   await showPractice(page)
   await expect(page.getByRole('region', { name: 'Round result' })).toHaveCount(0)
   expect(await savedScores(page)).toEqual(original)
-  await cells.first().press('Enter')
+  await cells.first().press('Shift+Enter')
   await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
   const saved = await savedScores(page)
   expect(saved).toHaveLength(2)
@@ -215,10 +215,10 @@ test('Enter completion keeps history filters independent and persists round sett
   expect(await savedScores(page)).toEqual(saved)
 })
 
-test('advertises Enter finish and preserves the navigation and cancel keyboard clues', async ({ page }) => {
+test('advertises Shift+Enter finish and preserves the navigation and cancel keyboard clues', async ({ page }) => {
   await startSmall(page)
-  await expect(page.getByText('Enter finish · Space / Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Finish', exact: true })).toHaveAttribute('aria-keyshortcuts', 'Enter')
+  await expect(page.getByText('Shift + Enter finish · Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Finish', exact: true })).toHaveAttribute('aria-keyshortcuts', 'Shift+Enter')
 })
 
 test('empty Enter and a held start Enter cannot finish or advance the round', async ({ page }) => {
@@ -236,7 +236,7 @@ test('empty Enter and a held start Enter cannot finish or advance the round', as
   expect(await savedScores(page)).toEqual([])
   await page.keyboard.up('Enter')
   await cell.fill('')
-  await cell.press('Enter')
+  await cell.press('Shift+Enter')
   await expect(cell).toBeFocused()
   await page.locator('body').click({ position: { x: 8, y: 8 } })
   await page.keyboard.press('Enter')
@@ -249,13 +249,13 @@ test('empty Enter and a held start Enter cannot finish or advance the round', as
   expect(await savedScores(page)).toEqual([])
 })
 
-test('Enter finishes a partial round in place and freezes the saved answers and timer', async ({ page }) => {
+test('Shift+Enter finishes a partial round in place and freezes the saved answers and timer', async ({ page }) => {
   await page.clock.install()
   await startSmall(page)
   const cells = page.getByRole('textbox')
   await cells.first().fill('0')
   await page.clock.runFor(1500)
-  await cells.first().press('Enter')
+  await cells.first().press('Shift+Enter')
   await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
   await expect(cells.first()).toBeFocused()
   await expect(cells.first()).toHaveAttribute('readonly', '')

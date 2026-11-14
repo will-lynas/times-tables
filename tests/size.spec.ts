@@ -36,7 +36,9 @@ for (const size of [2, 7]) {
       [0, 'ArrowRight', 1], [1, 'ArrowLeft', 0],
       [0, 'ArrowLeft', 0], [0, 'ArrowUp', 0],
       [size - 1, 'ArrowRight', size - 1], [size, 'ArrowLeft', size],
-      [size - 1, 'Space', size], [size * size - 1, 'Space', size * size - 1],
+      [size - 1, 'Tab', size], [size, 'Shift+Tab', size - 1],
+      [size * size - 1, 'Space', size * size - 1],
+      [size * size - 1, 'Enter', size * size - 1],
       [size * size - 1, 'ArrowDown', size * size - 1],
     ] as const) {
       await cells.nth(from).press(key)
