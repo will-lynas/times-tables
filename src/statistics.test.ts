@@ -89,9 +89,16 @@ test.each(['', 7])('invalid run identity does not create any persistent data: %j
   expect(storage.length).toBe(0)
 })
 
+test('finished counts submissions, fully-filled denominator and fastest exclude partials, errors and other exact sets', () => {
+  const tracking = { starts: [{ id: 'cancelled', mode: 'ordered' as const, factors: [2, 7] }], incomplete: true, warning: null }
+  const scores = [score('p1', { elapsedMs: 60000 }), score('p2', { elapsedMs: 20000 }), score('wrong', { correct: 3, elapsedMs: 100 }), score('partial', { status: 'partial', attempted: 1, correct: 1, elapsedMs: 0 }), score('other', { factors: [3, 8], elapsedMs: 1 })]
+  expect(summarizeRuns(scores, tracking, 'ordered', 'set:2,7')).toMatchObject({ finished: 4, completed: 3, perfect: 2, fastestSeconds: 20 })
+  expect(summarizeRuns([], tracking, 'ordered', 'set:2,7')).toMatchObject({ finished: 0, completed: 0, perfect: 0, fastestSeconds: null })
+})
+
 const score = (id: string, change: Partial<Score> = {}): Score => ({ id, mode: 'ordered', size: 2, factors: [2, 7], status: 'complete', attempted: 4, correct: 4, total: 4, elapsedMs: 100, completedAt: '2026-01-01T00:00:00Z', ...change })
 
 test('counts complete and perfect from exact counts, deduplicating run identities', async () => {
   const scores = [score('perfect'), score('wrong', { correct: 3 }), score('partial', { status: 'partial', attempted: 1, correct: 1 }), score('perfect'), score('invalid', { attempted: 1 })]
-  expect(summarizeRuns(scores, { starts: [{ id: 'perfect', mode: 'ordered', factors: [2, 7] }, { id: 'cancel', mode: 'ordered', factors: [2, 7] }], incomplete: true, warning: null }, 'all', 'all')).toEqual({ started: 5, completed: 2, perfect: 1, incomplete: true })
+  expect(summarizeRuns(scores, { starts: [{ id: 'perfect', mode: 'ordered', factors: [2, 7] }, { id: 'cancel', mode: 'ordered', factors: [2, 7] }], incomplete: true, warning: null }, 'all', 'all')).toEqual({ finished: 4, fastestSeconds: 0.1, started: 5, completed: 2, perfect: 1, incomplete: true })
 })

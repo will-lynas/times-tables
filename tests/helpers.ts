@@ -2,6 +2,10 @@ import { expect, type Locator, type Page } from '@playwright/test'
 
 export async function chooseFilter(trigger: Locator, choice: string | { label: string }) {
   const page = trigger.page()
+  if (await trigger.getAttribute('role') === 'radiogroup') {
+    await trigger.getByRole('radio', { name: String(choice) === 'ordered' ? 'Ordered' : 'Shuffled', exact: true }).click()
+    return
+  }
   const label = await trigger.getAttribute('aria-label')
   await trigger.click()
   const panel = page.getByRole('listbox', { name: `${label} options`, exact: true })

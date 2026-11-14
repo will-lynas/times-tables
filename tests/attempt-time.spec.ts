@@ -38,7 +38,7 @@ function exact(page: Page, iso: string) {
   }).format(new Date(iso)), iso)
 }
 
-test('attempt dates are relative for a week, then local; exact dates are accessible in both tables', async ({ page }) => {
+test('attempt dates are relative for a week, then local; exact dates are accessible in the single history table', async ({ page }) => {
   await seed(page)
   const table = page.getByRole('table', { name: 'Score history', exact: true })
   await expect(table.getByRole('columnheader', { name: 'Date', exact: true })).toBeVisible()
@@ -61,14 +61,14 @@ test('attempt dates are relative for a week, then local; exact dates are accessi
   }
   await expect.poll(async () => {
     await page.clock.runFor(100)
-    return page.getByRole('table', { name: 'Progress data' }).count()
+    return page.getByRole('table', { name: 'Score history', exact: true }).count()
   }).toBe(1)
-  const graphTimes = page.getByRole('table', { name: 'Progress data' }).locator('time')
+  const graphTimes = page.getByRole('table', { name: 'Score history', exact: true }).locator('time')
   await expect(graphTimes).toHaveCount(6)
-  await expect(graphTimes.last()).toHaveText('in 5 mins')
+  await expect(graphTimes.first()).toHaveText('in 5 mins')
   const raw = await page.evaluate(() => localStorage.getItem('times-tables.scores'))
   await page.clock.runFor(2000)
-  await expect(graphTimes.nth(1)).toHaveText(await exact(page, records[5].completedAt))
+  await expect(graphTimes.nth(4)).toHaveText(await exact(page, records[5].completedAt))
   await page.getByRole('link', { name: 'Practice', exact: true }).click()
   await page.getByRole('link', { name: 'Stats', exact: true }).click()
   await expect(times.nth(1)).toHaveText(/^[23] secs ago$/)

@@ -39,7 +39,7 @@ test('keeps partial status distinct within chronological history after reload', 
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
   await showStats(page)
   await expect(partials).toHaveCount(1)
-  await chooseFilter(page.getByRole('combobox', { name: 'Score order' }), 'shuffled')
+  await chooseFilter(page.getByRole('radiogroup', { name: 'Stats order' }), 'shuffled')
   await expect(partials).toHaveCount(0)
 })
 

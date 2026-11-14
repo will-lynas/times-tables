@@ -7,7 +7,7 @@ for (const key of ['times-tables.settings', 'times-tables.progress']) test(`unsu
   await page.evaluate(({ key, raw }) => localStorage.setItem(key, raw), { key, raw })
   await page.reload()
   if (key.endsWith('settings')) await chooseGridSize(page, 3)
-  else { await showStats(page); await chooseFilter(page.getByRole('combobox', { name: 'Progress order', exact: true }), 'ordered') }
+  else { await showStats(page); await chooseFilter(page.getByRole('radiogroup', { name: 'Stats order', exact: true }), 'ordered') }
   await expect(page.getByRole('alert').filter({ hasText: /not saved|could not be read/ }).first()).toBeVisible()
   expect(await page.evaluate(key => localStorage.getItem(key), key)).toBe(raw)
 })

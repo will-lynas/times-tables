@@ -80,7 +80,7 @@ for (const appearance of ['dark', 'light']) {
     expect(geometry.grid.length).toBe(geometry.ticks.length)
     geometry.grid.forEach(line => { expect(line.y).toBe(line.y2); expect(line.opacity).toBeLessThanOrEqual(0.15); expect(geometry.ticks.some(t => Math.abs(t.y - line.y) < 1)).toBe(true) })
     await expect(graph.getByRole('img')).toHaveAccessibleDescription(/5 and 25 perfect complete rounds.*fewer.*warm-up.*best.*strictly faster/i)
-    await expect(graph.getByRole('table', { name: 'Progress data' }).getByRole('columnheader')).toHaveText(['Date', 'Status', 'Attempted', 'Accuracy', 'Duration'])
+    await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('columnheader')).toHaveText(['Date', 'Status', 'Attempted', 'Correct', 'Accuracy', 'Time'])
     for (const [index, duration] of [[0, '1m'], [3, '1m 20s'], [4, '0s']] as const) {
       await graph.locator('.progress-perfect .recharts-scatter-symbol').nth(index).hover()
       await expect(graph.locator('.progress-tooltip-duration')).toHaveText(duration)
@@ -159,5 +159,5 @@ test('partial and inaccurate points alone create no averages or best-time record
   const graph = await seed(page, [run(0, 0, { status: 'partial', attempted: 1, correct: 1 }), run(1, 10, { correct: 3 })], 'dark')
   await expect(graph.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(2)
   await expect(graph.locator('.recharts-line-curve[d], .progress-best-dot')).toHaveCount(0)
-  await expect(graph.getByRole('table', { name: 'Progress data' }).getByRole('row')).toHaveCount(3)
+  await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(3)
 })

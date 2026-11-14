@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { Button, IconButton, SegmentedControl, Switch, Theme } from '@radix-ui/themes'
-import { canonicalFactors, presetFactors, factorOption, settingLabel } from './factors'
+import { canonicalFactors, presetFactors, factorOption, factorsFromOption } from './factors'
 import { createGrid, scoreAnswers, type Grid, type Mode } from './game'
 import { loadScores, saveScores, scoreFactors, type Score } from './scores'
 import { loadSettings, saveSettings, type Settings } from './settings'
@@ -9,6 +9,8 @@ import { StyledSelect } from './StyledSelect'
 import { GridSizePicker } from './GridSizePicker'
 import { AttemptTime } from './AttemptTime'
 import { StatsSummary } from './StatsSummary'
+import { loadProgressSelection, saveProgressSelection } from './progressSettings'
+import type { ProgressSelection } from './progress'
 import { loadRunStarts, recordRunStart, RUN_META_KEY, RUN_START_PREFIX } from './statistics'
 import { loadTheme, saveTheme } from './theme'
 const ProgressChart = lazy(() => import('./ProgressChart'))
@@ -51,11 +53,25 @@ export default function App() {
   }
 
   const [settings, setSettings] = useState(loadSettings)
-  const { mode, scoreMode, scoreSize } = settings
+  const { mode } = settings
   const custom = settings.choice === 'custom'
   const customFactors = settings.customFactors ?? presetFactors(settings.size)
   const factors = custom ? customFactors : presetFactors(settings.size)
   const size = factors.length
+  const fallbackSelection = { mode, size: size || 12, factors: size ? factors : presetFactors(12) }
+  const [statsSelection, setStatsSelection] = useState<ProgressSelection | null>(() => page === 'stats' ? loadProgressSelection(fallbackSelection) : null)
+  const selection = statsSelection ?? loadProgressSelection(fallbackSelection)
+  const selectedFactors = selection.factors ?? presetFactors(selection.size)
+  function chooseStats(change: Partial<ProgressSelection>) {
+    const next = { ...selection, ...change }
+    setStatsSelection(next)
+    void saveProgressSelection(change, selection).then(warning => {
+      if (warning) setStatsSelection(current => ({ ...(current ?? next), warning }))
+    })
+  }
+  useEffect(() => {
+    if (page === 'stats' && statsSelection === null) setStatsSelection(selection)
+  }, [page, statsSelection, selection])
   function updateSettings(change: Partial<Settings>) {
     const next = { ...settings, ...change }
     setSettings(next)
@@ -89,8 +105,8 @@ export default function App() {
   const filled = answers.filter(Boolean).length
 
 
-  const visibleScores = history.scores.filter(score => (scoreMode === 'all' || score.mode === scoreMode)
-    && (settings.scoreFactors ? factorOption(scoreFactors(score)) === settings.scoreFactors : scoreSize === 'all' || factorOption(scoreFactors(score)) === String(scoreSize)))
+  const visibleScores = history.scores.filter(score => score.mode === selection.mode
+    && factorOption(scoreFactors(score)) === factorOption(selectedFactors))
     .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
   const total = size * size
   const placeholders = Array.from({ length: size }, () => null)
@@ -308,19 +324,24 @@ export default function App() {
       </div>
       {page === 'stats' && <div className="stats-page">
       {history.warning && <p className="storage-warning" role="alert">{history.warning}</p>}
-        <div className="toolbar" role="group" aria-label="Score filters">
-          <StyledSelect label="Score order" showLabel value={scoreMode} onChange={value => updateSettings({ scoreMode: value as Settings['scoreMode'] })}
-            options={[{ value: 'all', label: 'All orders' }, { value: 'ordered', label: 'Ordered' }, { value: 'shuffled', label: 'Shuffled' }]} />
-          <StyledSelect label="Score size" showLabel sizes value={settings.scoreFactors ?? scoreSize} onChange={value => updateSettings({ scoreSize: 'all', scoreFactors: value === 'all' ? undefined : value })}
-            options={[{ value: 'all', label: 'All sizes' }, ...factorSetOptions([...history.scores.map(scoreFactors), ...tracking.starts.map(run => run.factors), factors, customFactors])]} />
+        <div className="toolbar stats-settings" role="group" aria-label="Stats settings">
+          <SegmentedControl.Root aria-label="Stats order" data-value={selection.mode} value={selection.mode} onValueChange={value => chooseStats({ mode: value as Mode })}>
+            <SegmentedControl.Item value="ordered">Ordered</SegmentedControl.Item>
+            <SegmentedControl.Item value="shuffled">Shuffled</SegmentedControl.Item>
+          </SegmentedControl.Root>
+          <StyledSelect label="Stats size" sizes value={factorOption(selectedFactors)} onChange={value => {
+            const values = factorsFromOption(value)
+            chooseStats({ size: values.length, factors: values })
+          }} options={factorSetOptions([...history.scores.map(scoreFactors), ...tracking.starts.map(run => run.factors), factors, customFactors, selectedFactors])} />
         </div>
-      <StatsSummary scores={history.scores} tracking={tracking} mode={scoreMode} selection={settings.scoreFactors ?? String(scoreSize)} unavailable={Boolean(history.warning)} />
-      <Suspense fallback={<p role="status">Loading stats…</p>}><ProgressChart scores={history.scores} initialSelection={{ mode, size: size || 12, factors: size ? factors : presetFactors(12) }} /></Suspense>
+      {selection.warning && <p className="storage-warning" role="alert">{selection.warning}</p>}
+      <StatsSummary scores={history.scores} tracking={tracking} mode={selection.mode} selection={factorOption(selectedFactors)} unavailable={Boolean(history.warning)} />
+      <Suspense fallback={<p role="status">Loading stats…</p>}><ProgressChart scores={history.scores} selection={selection} onSelectionChange={chooseStats} /></Suspense>
       <section className="scores" aria-labelledby="scores-heading">
         <div className="score-heading"><h2 id="scores-heading">Score history</h2></div>
-        {visibleScores.length === 0 ? <p>{history.scores.length > 0 ? 'No rounds match these filters.' : 'No rounds yet.'}</p> : <table className="score-table" aria-label="Score history">
-          <thead><tr><th>Date</th><th>Status</th><th>Order</th><th>Factors</th><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
-          <tbody>{visibleScores.map(score => <tr key={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td><AttemptTime completedAt={score.completedAt} /></td><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.mode === 'ordered' ? 'Ordered' : 'Shuffled'}</td><td>{settingLabel(scoreFactors(score))}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
+        {visibleScores.length === 0 ? <p>{history.scores.length > 0 ? 'No rounds for these settings.' : 'No rounds yet.'}</p> : <table className="score-table" aria-label="Score history">
+          <thead><tr><th>Date</th><th>Status</th><th>Attempted</th><th>Correct</th><th>Accuracy</th><th>Time</th></tr></thead>
+          <tbody>{visibleScores.map(score => <tr key={score.id} data-score-id={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td><AttemptTime completedAt={score.completedAt} /></td><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>}
       </section>
       </div>}

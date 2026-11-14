@@ -1,0 +1,56 @@
+import { expect, test, type Page } from '@playwright/test'
+import { chooseFilter, showPractice, showStats } from './helpers'
+
+const record = (id: string, factors: number[], mode = 'ordered', extra = {}) => ({ id, factors, size: factors.length, mode, status: 'complete', attempted: factors.length ** 2, total: factors.length ** 2, correct: factors.length ** 2, elapsedMs: 60000, completedAt: `2026-01-${id.endsWith('2') ? '02' : '01'}T00:00:00Z`, ...extra })
+const scores = [record('preset', [1, 2]), record('a1', [2, 7]), record('a2', [2, 7], 'ordered', { elapsedMs: 20000 }), record('apartial', [2, 7], 'ordered', { status: 'partial', attempted: 1, correct: 1 }), record('awrong', [2, 7], 'ordered', { correct: 3 }), record('b1', [3, 8]), record('shuffle', [2, 7], 'shuffled')]
+
+async function population(page: Page, ids: string[], values: string[], perfect: number, other: number) {
+  await expect(page.getByRole('region', { name: 'Run statistics' }).locator('dd')).toHaveText(values)
+  expect(await page.getByRole('table', { name: 'Score history', exact: true }).locator('tbody tr').evaluateAll(rows => rows.map(row => row.getAttribute('data-score-id')))).toEqual(ids)
+  await expect(page.locator('.progress-perfect .recharts-scatter-symbol')).toHaveCount(perfect)
+  await expect(page.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(other)
+}
+
+test('one exact settings row drives summary graph and newest-first history without grouping or rewriting records', async ({ page }) => {
+  await page.goto('/')
+  await page.evaluate(scores => {
+    localStorage.setItem('times-tables.settings', JSON.stringify({ version: 1, mode: 'ordered', size: 2, scoreMode: 'all', scoreSize: 'all', retained: { future: true } }))
+    localStorage.setItem('times-tables.scores', JSON.stringify({ version: 4, scores, unknown: 'preserve' }))
+    localStorage.setItem('times-tables.run-tracking', JSON.stringify({ version: 1, incomplete: false }))
+    localStorage.setItem('times-tables.run-start.start-only', JSON.stringify({ version: 1, mode: 'ordered', factors: [5, 9] }))
+  }, scores)
+  await page.reload()
+  await showStats(page)
+  await expect(page.getByRole('group', { name: 'Stats settings', exact: true })).toHaveCount(1)
+  await expect(page.getByRole('combobox')).toHaveCount(1)
+  await expect(page.getByRole('table')).toHaveCount(1)
+  await population(page, ['preset'], ['1', '1', '100%', '1m'], 1, 0)
+  const bytes = await page.evaluate(() => [localStorage.getItem('times-tables.scores'), localStorage.getItem('times-tables.settings')])
+  const picker = page.getByRole('combobox', { name: 'Stats size', exact: true })
+  await picker.click()
+  await expect(page.getByRole('option', { name: /all/i })).toHaveCount(0)
+  await expect(page.getByRole('option').filter({ hasText: '{5, 9}' })).toHaveCount(1)
+  await page.keyboard.press('Escape')
+  await chooseFilter(picker, 'set:2,7')
+  await population(page, ['a2', 'a1', 'apartial', 'awrong'], ['4', '3', '66.7%', '20s'], 2, 2)
+  await page.locator('.progress-perfect .recharts-scatter-symbol').last().hover()
+  await expect(page.locator('.progress-tooltip dd')).toHaveText(['100%', '4 / 4', '40s', '40s', '20s'])
+  await chooseFilter(picker, 'set:3,8')
+  await population(page, ['b1'], ['1', '1', '100%', '1m'], 1, 0)
+  await chooseFilter(picker, 'set:2,7')
+  await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()
+  await population(page, ['shuffle'], ['1', '1', '100%', '1m'], 1, 0)
+  await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
+  await chooseFilter(picker, 'set:5,9')
+  await expect(page.getByRole('region', { name: 'Run statistics' }).locator('dd')).toHaveText(['0', '0', '—', '—'])
+  await expect(page.getByRole('table')).toHaveCount(0)
+  await expect(page.locator('.recharts-scatter-symbol')).toHaveCount(0)
+  await chooseFilter(picker, '12')
+  await expect(page.getByRole('region', { name: 'Run statistics' }).locator('dd')).toHaveText(['0', '0', '—', '—'])
+  await page.reload()
+  await expect(picker).toHaveAttribute('data-value', '12')
+  expect(await page.evaluate(() => [localStorage.getItem('times-tables.scores'), localStorage.getItem('times-tables.settings')])).toEqual(bytes)
+  await showPractice(page)
+  await expect(page.getByRole('button', { name: 'Grid size', exact: true })).toHaveText('2 × 2')
+  await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeChecked()
+})

@@ -79,5 +79,7 @@ export function summarizeRuns(scores: Score[], tracking: RunStarts, mode: Mode |
   const selected = [...new Map(scores.filter(score => matches({ ...score, factors: scoreFactors(score) })).map(score => [score.id, score])).values()]
   const started = new Set([...tracking.starts.filter(matches).map(run => run.id), ...selected.map(score => score.id)]).size
   const completed = selected.filter(score => score.status === 'complete' && score.attempted === score.total)
-  return { started: tracking.warning ? null : started, completed: completed.length, perfect: completed.filter(score => score.correct === score.total).length, incomplete: tracking.incomplete }
+  const perfect = completed.filter(score => score.correct === score.total)
+  const fastestSeconds = perfect.length ? Math.min(...perfect.map(score => score.elapsedMs / 1000)) : null
+  return { finished: selected.length, fastestSeconds, started: tracking.warning ? null : started, completed: completed.length, perfect: perfect.length, incomplete: tracking.incomplete }
 }

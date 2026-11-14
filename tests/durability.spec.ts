@@ -15,7 +15,7 @@ test('graph selection survives reload before its delayed preference commit', asy
     }))
     await ready
   })
-  const order = page.getByRole('combobox', { name: 'Progress order', exact: true })
+  const order = page.getByRole('radiogroup', { name: 'Stats order', exact: true })
   await chooseFilter(order, 'ordered')
   await page.reload({ waitUntil: 'commit' })
   await holder.evaluate(() => (window as unknown as { releaseStorageLock: () => void }).releaseStorageLock())

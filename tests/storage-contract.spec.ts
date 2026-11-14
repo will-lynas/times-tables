@@ -32,7 +32,10 @@ for (const version of [1, 2, 3, 4]) test(`production round flow migrates v${vers
   if (version < 4) expect(await page.evaluate(version => JSON.parse(localStorage.getItem(`times-tables.scores.backup.v${version}`)!), version)).toEqual([raw])
   await page.reload()
   await showStats(page)
-  await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(3)
+  await expect(page.getByRole('table', { name: 'Score history', exact: true }).getByRole('row')).toHaveCount(2)
+  await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
+  await chooseFilter(page.getByRole('combobox', { name: 'Stats size' }), version === 1 ? '12' : version < 4 ? '2' : 'set:7,13')
+  await expect(page.locator('tr[data-score-id="fixture"]')).toHaveCount(1)
 })
 
 test('two stale tabs finishing together retain both rounds and independent preference changes', async ({ context, page }) => {
@@ -50,13 +53,13 @@ test('two stale tabs finishing together retain both rounds and independent prefe
   expect(new Set(ids).size).toBe(2)
   await Promise.all([showStats(page), showStats(other)])
   await Promise.all([
-    chooseFilter(page.getByRole('combobox', { name: 'Score order', exact: true }), 'ordered'),
-    chooseFilter(other.getByRole('combobox', { name: 'Score size', exact: true }), '2'),
+    chooseFilter(page.getByRole('radiogroup', { name: 'Stats order', exact: true }), 'ordered'),
+    chooseFilter(other.getByRole('combobox', { name: 'Stats size', exact: true }), '2'),
   ])
   await page.reload()
-  await expect(page.getByRole('combobox', { name: 'Score order', exact: true })).toHaveAttribute('data-value', 'ordered')
-  await expect(page.getByRole('combobox', { name: 'Score size', exact: true })).toHaveAttribute('data-value', '2')
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.settings')!))).toMatchObject({ scoreMode: 'ordered', scoreFactors: '2' })
+  await expect(page.getByRole('radiogroup', { name: 'Stats order', exact: true })).toHaveAttribute('data-value', 'ordered')
+  await expect(page.getByRole('combobox', { name: 'Stats size', exact: true })).toHaveAttribute('data-value', '2')
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.progress')!))).toMatchObject({ mode: 'ordered', factors: [1, 2] })
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!).scores.map((s: { id: string }) => s.id))).toEqual(ids)
   await other.close()
 })
