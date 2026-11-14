@@ -26,6 +26,14 @@ export async function showPractice(page: Page) {
   await expect(link).toHaveAttribute('aria-current', 'page')
 }
 
+export async function enableSpaceAdvance(page: Page) {
+  await page.getByRole('link', { name: 'Settings', exact: true }).click()
+  const toggle = page.getByRole('switch', { name: 'Space to advance', exact: true })
+  if (!await toggle.isChecked()) await toggle.click()
+  await expect(toggle).toBeChecked()
+  await showPractice(page)
+}
+
 export async function chooseGridSize(page: Page, size: number) {
   const trigger = page.getByRole('button', { name: 'Grid size', exact: true })
   await trigger.click()

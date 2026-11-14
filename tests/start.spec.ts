@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { enableSpaceAdvance } from './helpers'
 
 for (const key of ['Enter', 'Space']) {
   test(`${key} on the page starts once, focuses the first cell and does not scroll`, async ({ page }) => {
@@ -110,6 +111,7 @@ test('does not start behind an open popup but ignores closed popups', async ({ p
 test('Space advances without inserting text or scrolling and stops at the last cell', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 800 })
   await page.goto('/')
+  await enableSpaceAdvance(page)
   await page.keyboard.press('Enter')
   const cells = page.getByRole('textbox')
   await cells.first().fill('12')

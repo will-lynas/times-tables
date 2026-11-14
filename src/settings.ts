@@ -5,10 +5,10 @@ import { durableWrite, recoverWrites } from './writeJournal'
 
 const SETTINGS_KEY = 'times-tables.settings'
 export type Settings = { mode: Mode; size: number; scoreMode: Mode | 'all'; scoreSize: number | 'all';
-  choice?: 'preset' | 'custom'; customFactors?: number[]; scoreFactors?: string; warning?: string }
+  choice?: 'preset' | 'custom'; customFactors?: number[]; scoreFactors?: string; spaceToAdvance?: boolean; warning?: string }
 
 export function loadSettings(): Settings {
-  const defaults: Settings = { mode: 'shuffled', size: 12, scoreMode: 'all', scoreSize: 'all' }
+  const defaults: Settings = { mode: 'shuffled', size: 12, scoreMode: 'all', scoreSize: 'all', spaceToAdvance: false }
   try {
     const { data } = readPreferences(browserStorage(), SETTINGS_KEY)
     const { mode, size, scoreMode, scoreSize, choice, customFactors, scoreFactors } = data as Record<string, unknown>
@@ -23,6 +23,7 @@ export function loadSettings(): Settings {
     }
     return {
       ...custom, ...filter,
+      spaceToAdvance: data.spaceToAdvance === true,
       ...(!validSettings(data) && !custom.warning ? { warning: STORAGE_WARNING } : {}),
       ...(choice === 'custom' || choice === 'preset' ? { choice } : {}),
       mode: mode === 'ordered' || mode === 'shuffled' ? mode : defaults.mode,
@@ -38,6 +39,7 @@ export function loadSettings(): Settings {
 function validSettings(data: Record<string, unknown>): boolean {
   try {
     if ('mode' in data && data.mode !== 'ordered' && data.mode !== 'shuffled') return false
+    if ('spaceToAdvance' in data && typeof data.spaceToAdvance !== 'boolean') return false
     if ('scoreMode' in data && !['all', 'ordered', 'shuffled'].includes(data.scoreMode as string)) return false
     for (const key of ['size', 'scoreSize']) {
       const value = data[key]

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
-import { Button, IconButton, SegmentedControl, Theme } from '@radix-ui/themes'
+import { Button, IconButton, SegmentedControl, Switch, Theme } from '@radix-ui/themes'
 import { canonicalFactors, presetFactors, factorOption, settingLabel } from './factors'
 import { createGrid, scoreAnswers, type Grid, type Mode } from './game'
 import { loadScores, saveScores, scoreFactors, type Score } from './scores'
@@ -18,9 +18,10 @@ function formatTime(ms: number) {
   return `${Math.floor(tenths / 600)}:${String(Math.floor(tenths / 10) % 60).padStart(2, '0')}.${tenths % 10}`
 }
 
-type Page = 'practice' | 'stats' | 'about'
+type Page = 'practice' | 'stats' | 'about' | 'settings'
 
 function pageFromPath(): Page {
+  if (window.location.pathname === '/settings') return 'settings'
   if (window.location.pathname === '/about') return 'about'
   return ['/stats', '/progress'].includes(window.location.pathname) ? 'stats' : 'practice'
 }
@@ -196,6 +197,11 @@ export default function App() {
   function navigate(event: KeyboardEvent<HTMLInputElement>, index: number) {
     if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229 || event.defaultPrevented) return
     if (event.altKey || event.ctrlKey || event.metaKey) return
+    if (event.key === ' ') {
+      event.preventDefault()
+      if (settings.spaceToAdvance) inputs.current[Math.min(index + 1, total - 1)]?.focus()
+      return
+    }
     if (event.key === 'Enter') {
       // Plain Enter must not submit; Shift+Enter is handled by the finish shortcut.
       if (!event.shiftKey) event.preventDefault()
@@ -203,7 +209,6 @@ export default function App() {
     }
     const column = index % size
     const target = {
-      ' ': Math.min(index + 1, total - 1),
       ArrowRight: column < size - 1 ? index + 1 : index,
       ArrowLeft: column > 0 ? index - 1 : index,
       ArrowDown: index < total - size ? index + size : index,
@@ -224,6 +229,7 @@ export default function App() {
             <a href="/" aria-current={page === 'practice' ? 'page' : undefined} onClick={event => changePage(event, 'practice')}>Practice</a>
             <a href="/stats" aria-current={page === 'stats' ? 'page' : undefined} onClick={event => changePage(event, 'stats')}>Stats</a>
             <a href="/about" aria-current={page === 'about' ? 'page' : undefined} onClick={event => changePage(event, 'about')}>About</a>
+            <a href="/settings" aria-current={page === 'settings' ? 'page' : undefined} onClick={event => changePage(event, 'settings')}>Settings</a>
           </nav>
           <IconButton variant="ghost" color="gray" radius="full" onClick={toggleTheme}
             aria-label={`Switch to ${appearance === 'dark' ? 'light' : 'dark'} mode`}
@@ -295,7 +301,7 @@ export default function App() {
       </div>}
       </div>
       <div className="grid-footer">
-        <p>{running ? 'Shift + Enter finish · Space / Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit' : null}</p>
+        <p>{running ? `Shift + Enter finish · ${settings.spaceToAdvance ? 'Space / Tab' : 'Tab'} next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit` : null}</p>
         {!result && <Button type="button" disabled={!running || filled === 0} onClick={finish} aria-keyshortcuts="Shift+Enter">{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
       </div>
 
@@ -318,6 +324,14 @@ export default function App() {
         </table>}
       </section>
       </div>}
+      {page === 'settings' && <section className="settings-page" aria-labelledby="settings-heading">
+        <h2 id="settings-heading">Settings</h2>
+        {settings.warning && <p className="storage-warning" role="alert">{settings.warning}</p>}
+        <label className="setting-row" htmlFor="space-to-advance">
+          <span>Space to advance</span>
+          <Switch id="space-to-advance" checked={settings.spaceToAdvance === true} onCheckedChange={spaceToAdvance => updateSettings({ spaceToAdvance })} />
+        </label>
+      </section>}
       {page === 'about' && <section className="about-page" aria-labelledby="about-heading">
         <h2 id="about-heading">About</h2>
         <p><a href="https://github.com/will-lynas/times-tables">GitHub</a></p>

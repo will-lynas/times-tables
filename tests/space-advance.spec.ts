@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test'
 import { SCORE_KEY } from '../src/scores'
-import { chooseGridSize } from './helpers'
+import { chooseGridSize, enableSpaceAdvance } from './helpers'
 
 test('Space advances across the grid without changing answers or finishing at the last cell', async ({ page }) => {
   await page.goto('/')
+  await enableSpaceAdvance(page)
   await chooseGridSize(page, 2)
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   const cells = page.getByRole('textbox')
