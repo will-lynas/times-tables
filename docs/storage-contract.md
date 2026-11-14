@@ -36,6 +36,16 @@ Validation requires exactly `total` uniquely positioned cells, consistent axes c
 
 Stats → Calculations uses the same exact order/factor selection as Overview and Practice. Wrong counts are divided by all answered detailed observations of that ordered operand pair, including partial runs. Unanswered cells and aggregate-only history do not enter that denominator. Coverage reports detailed runs / selected submitted runs and answered detailed cells. Rows sort by wrong count descending, then row operand, then column operand; on-demand answer detail retains exact incorrect strings and counts alongside the correct product.
 
+## Per-cell answer-entry timing
+
+New submissions also carry optional `calculations.timing: {version: 1, cells: [{index, answerEntryMs, focusedMs, visits, edits}]}` in the same immutable score payload, never a separate key or writer. Timing cells match the outcome array positions; existing outcome arrays are never rebuilt/enriched. Stage-1 detail and aggregate-only history keep missing timing. Unknown metadata at timing/container/cell levels survives untouched. Future or malformed timing fails closed with the existing storage warning and no primary rewrite.
+
+Durations are finite nonnegative monotonic-clock milliseconds. `answerEntryMs` is cumulative active focused time through the final accepted changed string, including pre-digit thinking and correction visits; a final blank is `null`, not zero. A same-tick accepted edit can be a genuine zero. `focusedMs` retains total observed active focus, including later unedited revisits and post-answer waits; it cannot be smaller than entry time. `visits` counts focus entries (not pause resumes), `edits` counts accepted changed strings including clears. Unvisited cells have zero focus/edits; answered timing requires a visit/edit. All positions and counts are validated. Cancel/reset discards the unsubmitted collector.
+
+The collector is created at the guarded start transition and frozen synchronously at guarded finish. It pauses when the document is hidden, the window unfocused or Practice inactive, without changing whole-round elapsed timing. The final-cell wait to Finish does not move the answer-entry checkpoint. See [exact lifecycle semantics](calculation-timing.md).
+
+Calculations defaults to Errors; Times shares the exact same committed source and authoritative settings. Ordered pairs rank by median correct-final-answer entry time; incorrect samples are separately marked, and no-correct medians are missing. Raw distributions and exact keyboard-accessible sample tables retain zeros, duplicates and outliers. Coverage gives timed runs / selected submissions and measured versus missing answered details; aggregate-only cell coverage is unknown. There are no inferred per-cell times or targeted practice mode.
+
 ## Durability and concurrency
 
 All cooperating writers acquire an origin-scoped exclusive Web Lock named after the target. Re-read and validate under that lock. Scores merge by stable ID; preferences merge deliberate field patches against the latest object. There is no unlocked read/merge/write fallback.

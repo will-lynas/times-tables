@@ -1,4 +1,5 @@
 import { canonicalFactors } from './factors'
+import { validTiming, type CalculationTiming } from './calculationTiming'
 import { object } from './storage'
 import type { Score } from './scores'
 
@@ -13,7 +14,7 @@ export type CalculationCell = {
   status: 'correct' | 'incorrect' | 'unanswered'
 }
 
-export type CalculationDetails = { version: 1; cells: CalculationCell[] }
+export type CalculationDetails = { version: 1; cells: CalculationCell[]; timing?: CalculationTiming }
 
 // Optional additive extension: absent means unknown historical detail, never zero.
 // Unknown fields survive untouched; unsupported versions/shapes block writes.
@@ -38,7 +39,8 @@ export function validCalculations(value: unknown, score: Score): value is Calcul
     if (status === 'correct') correct++
   }
   const factors = JSON.stringify(canonicalFactors(score.factors))
-  return attempted === score.attempted && correct === score.correct
+  return (!Object.hasOwn(value, 'timing') || validTiming(value.timing, value.cells as CalculationCell[]))
+    && attempted === score.attempted && correct === score.correct
     && rows.length === score.size && new Set(rows).size === score.size && new Set(columns).size === score.size
     && JSON.stringify(canonicalFactors(rows)) === factors && JSON.stringify(canonicalFactors(columns)) === factors
     && (score.mode !== 'ordered' || (JSON.stringify(rows) === factors && JSON.stringify(columns) === factors))

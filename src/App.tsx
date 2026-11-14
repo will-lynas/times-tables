@@ -12,6 +12,7 @@ import { StatsSummary } from './StatsSummary'
 import { loadProgressSelection, saveProgressSelection } from './progressSettings'
 import type { ProgressSelection } from './progress'
 import { CalculationStats } from './CalculationStats'
+import { CalculationTimer } from './calculationTiming'
 import { loadRunStarts, recordRunStart, RUN_META_KEY, RUN_START_PREFIX } from './statistics'
 import { loadTheme, saveTheme } from './theme'
 const ProgressChart = lazy(() => import('./ProgressChart'))
@@ -87,6 +88,7 @@ export default function App() {
   const [history, setHistory] = useState(loadScores)
   const [tracking, setTracking] = useState(() => loadRunStarts(loadScores().scores))
   const runId = useRef<string | null>(null)
+  const cellTimer = useRef<CalculationTimer | null>(null)
   useEffect(() => {
     function syncStorage(event: StorageEvent) {
       if (event.key === null || event.key === 'times-tables.scores' || event.key === RUN_META_KEY || event.key.startsWith(RUN_START_PREFIX)) {
@@ -123,6 +125,18 @@ export default function App() {
   }, [])
   const finished = useRef(false)
   const running = startedAt !== null
+  useLayoutEffect(() => {
+    const sync = () => cellTimer.current?.setActive(page === 'practice' && document.visibilityState === 'visible' && document.hasFocus(), performance.now())
+    sync()
+    window.addEventListener('focus', sync)
+    window.addEventListener('blur', sync)
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      window.removeEventListener('focus', sync)
+      window.removeEventListener('blur', sync)
+      document.removeEventListener('visibilitychange', sync)
+    }
+  }, [page])
   const settingsLocked = running || (grid !== null && result === null)
   function changeSharedSettings(change: Partial<Settings>) {
     if (settingsLocked) return
@@ -159,12 +173,16 @@ export default function App() {
     if (latest.warning) setTracking({ starts: [], incomplete: true, warning: latest.warning })
     else void recordRunStart({ id: runId.current, mode, factors }, latest.scores).then(setTracking)
     finished.current = false
-    setGrid(createGrid(mode, Math.random, factors))
+    const nextGrid = createGrid(mode, Math.random, factors)
+    const now = performance.now()
+    cellTimer.current = new CalculationTimer(nextGrid.products.length, now, page === 'practice' && document.visibilityState === 'visible' && document.hasFocus())
+    setGrid(nextGrid)
     setElapsed(0)
-    setStartedAt(performance.now())
+    setStartedAt(now)
   }
 
   function resetRound() {
+    cellTimer.current = null
     runId.current = null
     setStartedAt(null)
     setElapsed(0)
@@ -208,10 +226,12 @@ export default function App() {
   }, [running, size, page])
 
   function finish() {
-    if (!running || !grid || filled === 0 || finished.current) return
+    if (!running || page !== 'practice' || document.visibilityState !== 'visible' || !grid || filled === 0 || finished.current) return
     finished.current = true
-    const elapsedMs = performance.now() - startedAt
+    const now = performance.now()
+    const elapsedMs = now - startedAt
     const completed = scoreAnswers(grid, answers)
+    completed.calculations.timing = cellTimer.current!.snapshot(now)
     const score: Score = {
       id: runId.current!, mode, status: completed.status, attempted: completed.attempted,
       size: grid.size, factors: canonicalFactors(grid.rows), correct: completed.correct, total: completed.total,
@@ -334,10 +354,17 @@ export default function App() {
               aria-label={row && column ? `${row} × ${column}` : `Row ${rowIndex + 1}, column ${columnIndex + 1}`}
               aria-describedby={typeof match === 'boolean' ? feedbackId : undefined}
               type="text" inputMode="numeric" autoComplete="off" disabled={grid === null} readOnly={result !== null} maxLength={3}
-              value={answers[index]} onFocus={event => event.currentTarget.select()}
+              value={answers[index]} onFocus={event => {
+                cellTimer.current?.focus(index, performance.now())
+                event.currentTarget.select()
+              }}
+              onBlur={() => cellTimer.current?.blur(performance.now())}
               onChange={event => {
                 const value = event.currentTarget.value
-                if (running && /^\d{0,3}$/.test(value)) setAnswers(current => current.map((answer, cell) => cell === index ? value : answer))
+                if (running && /^\d{0,3}$/.test(value) && value !== answers[index]) {
+                  cellTimer.current?.edit(index, value, performance.now())
+                  setAnswers(current => current.map((answer, cell) => cell === index ? value : answer))
+                }
               }}
               onKeyDown={event => navigate(event, index)}
             />

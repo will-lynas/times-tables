@@ -1,11 +1,20 @@
 import { summarizeCalculations } from './calculations'
+import { lazy, Suspense, useState } from 'react'
+import { SegmentedControl } from '@radix-ui/themes'
 import type { Score } from './scores'
 import './calculations.css'
+const CalculationTimes = lazy(() => import('./CalculationTimes'))
 
 export function CalculationStats({ scores, unavailable = false }: { scores: Score[]; unavailable?: boolean }) {
+  const [view, setView] = useState('errors')
   if (unavailable) return <section aria-label="Calculation statistics"><p>Calculation details unavailable.</p></section>
   const summary = summarizeCalculations(scores)
   return <section className="calculation-stats" aria-labelledby="calculations-heading">
+    <SegmentedControl.Root aria-label="Calculation view" value={view} onValueChange={setView}>
+      <SegmentedControl.Item value="errors">Errors</SegmentedControl.Item>
+      <SegmentedControl.Item value="times">Times</SegmentedControl.Item>
+    </SegmentedControl.Root>
+    {view === 'times' ? <Suspense fallback={<p role="status">Loading timings…</p>}><CalculationTimes scores={scores} /></Suspense> : <>
     <h2 id="calculations-heading">Incorrect calculations</h2>
     <p className="detail-coverage">Detail coverage: {summary.detailedRuns} / {summary.runs} runs · {summary.answered} answered</p>
     {summary.detailedRuns === 0 ? <p>No calculation details yet.</p> : summary.incorrect.length === 0 ? <p>No incorrect answers in recorded details.</p> :
@@ -21,5 +30,6 @@ export function CalculationStats({ scores, unavailable = false }: { scores: Scor
           </details></td>
         </tr>)}</tbody>
       </table>}
+    </>}
   </section>
 }
