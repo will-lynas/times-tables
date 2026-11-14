@@ -1,3 +1,7 @@
 {
-  "rewrites": [{ "source": "/calculations", "destination": "/index.html" }, { "source": "/stats/calculations", "destination": "/index.html" }, { "source": "/stats", "destination": "/index.html" }, { "source": "/progress", "destination": "/index.html" }, { "source": "/about", "destination": "/index.html" }, { "source": "/settings", "destination": "/index.html" }]
+  "redirects": [
+    { "source": "/calculations", "destination": "/stats", "permanent": false },
+    { "source": "/stats/calculations", "destination": "/stats", "permanent": false }
+  ],
+  "rewrites": [{ "source": "/stats", "destination": "/index.html" }, { "source": "/progress", "destination": "/index.html" }, { "source": "/about", "destination": "/index.html" }, { "source": "/settings", "destination": "/index.html" }]
 }

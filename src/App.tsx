@@ -11,7 +11,6 @@ import { AttemptTime } from './AttemptTime'
 import { StatsSummary } from './StatsSummary'
 import { loadProgressSelection, saveProgressSelection } from './progressSettings'
 import type { ProgressSelection } from './progress'
-import { CalculationStats } from './CalculationStats'
 import { CalculationTimer } from './calculationTiming'
 import { loadRunStarts, recordRunStart, RUN_META_KEY, RUN_START_PREFIX } from './statistics'
 import { loadTheme, saveTheme } from './theme'
@@ -22,10 +21,13 @@ function formatTime(ms: number) {
   return `${Math.floor(tenths / 600)}:${String(Math.floor(tenths / 10) % 60).padStart(2, '0')}.${tenths % 10}`
 }
 
-type Page = 'practice' | 'stats' | 'calculations' | 'about' | 'settings'
+type Page = 'practice' | 'stats' | 'about' | 'settings'
 
 function pageFromPath(): Page {
-  if (['/calculations', '/stats/calculations'].includes(window.location.pathname)) return 'calculations'
+  if (['/calculations', '/stats/calculations'].includes(window.location.pathname)) {
+    window.history.replaceState(window.history.state, '', `/stats${window.location.search}${window.location.hash}`)
+    return 'stats'
+  }
   if (window.location.pathname === '/settings') return 'settings'
   if (window.location.pathname === '/about') return 'about'
   return ['/stats', '/progress'].includes(window.location.pathname) ? 'stats' : 'practice'
@@ -152,9 +154,6 @@ export default function App() {
   const visibleScores = history.scores.filter(score => score.mode === selection.mode
     && factorOption(scoreFactors(score)) === selectedKey)
     .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
-  // Stats retains its exact selection; Calculations spans all settings and
-  // includes only source records whose score transaction actually committed.
-  const recordedCalculations = page === 'calculations' ? loadScores() : null
   const total = size * size
   const placeholders = Array.from({ length: size }, () => null)
 
@@ -301,7 +300,6 @@ export default function App() {
           <nav className="page-nav" aria-label="Main">
             <a href="/" aria-current={page === 'practice' ? 'page' : undefined} onClick={event => changePage(event, 'practice')}>Practice</a>
             <a href="/stats" aria-current={page === 'stats' ? 'page' : undefined} onClick={event => changePage(event, 'stats')}>Stats</a>
-            <a href="/calculations" aria-current={page === 'calculations' ? 'page' : undefined} onClick={event => changePage(event, 'calculations')}>Calculations</a>
             <a href="/about" aria-current={page === 'about' ? 'page' : undefined} onClick={event => changePage(event, 'about')}>About</a>
             <a href="/settings" aria-current={page === 'settings' ? 'page' : undefined} onClick={event => changePage(event, 'settings')}>Settings</a>
           </nav>
@@ -410,10 +408,6 @@ export default function App() {
           <tbody>{visibleScores.map(score => <tr key={score.id} data-score-id={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td><AttemptTime completedAt={score.completedAt} /></td><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>}
       </section>
-      </div>}
-      {page === 'calculations' && <div className="calculations-page">
-        {history.warning && <p className="storage-warning" role="alert">{history.warning}</p>}
-        <CalculationStats scores={recordedCalculations!.scores} unavailable={Boolean(history.warning || recordedCalculations!.warning)} />
       </div>}
       {page === 'settings' && <section className="settings-page" aria-labelledby="settings-heading">
         <h2 id="settings-heading">Settings</h2>
