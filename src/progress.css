@@ -13,8 +13,8 @@
 .progress-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
 .progress-legend button { display: inline-flex; align-items: center; gap: 7px; padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--gray-12); font: inherit; font-size: 12px; cursor: pointer; }
 .progress-legend button:hover { background: var(--gray-3); }
-.progress-legend button[aria-pressed="false"] { border-color: var(--gray-7); border-style: dashed; }
-.progress-legend button[aria-pressed="false"] > span:first-of-type { text-decoration: line-through; }
+.progress-legend button[aria-pressed="false"] { color: var(--gray-11); }
+.progress-legend button[aria-pressed="false"] path { stroke: currentColor; stroke-opacity: 1; }
 .progress-legend button:focus-visible { outline: 2px solid var(--accent-11); outline-offset: 2px; }
 .progress-legend svg { flex: none; }
 .progress-plot { height: 280px; margin-top: 8px; }

@@ -1,4 +1,4 @@
-import { expect, test, type Page, type Locator } from '@playwright/test'
+import { chromium, expect, test, type Page, type Locator } from '@playwright/test'
 import type { Score } from '../src/scores'
 import { chooseFilter } from './helpers'
 
@@ -53,9 +53,7 @@ for (const appearance of ['dark', 'light']) for (const axis of ['time', 'runs'])
       if (shown) expect(await graph.locator(`${s.selector} .recharts-line-curve`).getAttribute('d')).toBe(paths[i])
       else {
         await expect(graph.locator(s.dot)).toHaveCount(0)
-        const off = await button.evaluate(e => ({ color: getComputedStyle(e).color, decoration: getComputedStyle(e.querySelector('span')!).textDecorationLine, border: getComputedStyle(e).borderTopStyle }))
-        expect(off.decoration).toBe('line-through')
-        expect(off.border).toBe('dashed')
+        await expectMuted(button)
       }
     }
     expect(await rawGeometry(graph)).toEqual(original)
@@ -80,7 +78,33 @@ for (const appearance of ['dark', 'light']) for (const axis of ['time', 'runs'])
   await page.setViewportSize({ width: 1024, height: 900 })
   await expect.poll(() => graph.locator('svg.recharts-surface[role="application"]').evaluate(e => e.getBoundingClientRect().width)).toBeLessThanOrEqual(928)
   expect(await graph.getByRole('group', { name: 'Chart series' }).evaluate(e => e.scrollWidth <= e.clientWidth)).toBe(true)
+  for (const s of series) {
+    const button = graph.getByRole('button', { name: s.name, exact: true })
+    if (await button.getAttribute('aria-pressed') === 'false') await button.click()
+  }
+  const narrowPaths = await Promise.all(series.map(s => graph.locator(`${s.selector} .recharts-line-curve`).getAttribute('d')))
+  const narrowGeometry = await rawGeometry(graph)
+  const mutedStyles = []
+  for (const [i, s] of series.entries()) {
+    const button = graph.getByRole('button', { name: s.name, exact: true })
+    if (await button.getAttribute('aria-pressed') === 'false') await button.click()
+    await button.focus()
+    await page.keyboard.press(i % 2 ? 'Enter' : 'Space')
+    await expect(button).toHaveAttribute('aria-pressed', 'false')
+    mutedStyles.push({ name: s.name, ...await expectMuted(button) })
+    await expect(graph.locator(`${s.selector} .recharts-line-curve[d], ${s.dot}`)).toHaveCount(0)
+    await page.keyboard.press(i % 2 ? 'Space' : 'Enter')
+    await expect(button).toHaveAttribute('aria-pressed', 'true')
+    expect(await graph.locator(`${s.selector} .recharts-line-curve`).getAttribute('d')).toBe(narrowPaths[i])
+    expect(await rawGeometry(graph)).toEqual(narrowGeometry)
+    const enabledSwatch = await button.locator('path').evaluate(p => { const c = getComputedStyle(p); return { stroke: c.stroke, opacity: c.strokeOpacity, width: c.strokeWidth } })
+    expect(enabledSwatch).toEqual(styles[i].swatch)
+    await button.click()
+    await expectMuted(button)
+  }
+  await graph.getByRole('heading').hover()
   await graph.screenshot({ path: info.outputPath(`${appearance}-${axis}-1024.png`) })
+  await info.attach('muted-styles-contrast', { body: JSON.stringify(mutedStyles), contentType: 'application/json' })
   expect(await page.getByRole('region', { name: 'Run statistics', exact: true }).textContent()).toBe(summary)
   expect(await page.getByRole('table', { name: 'Score history', exact: true }).textContent()).toBe(history)
   expect(await page.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(source)
@@ -160,6 +184,60 @@ test('legend labels have no state glyphs or reserved slots when shown or hidden'
     }
   }
 })
+
+for (const appearance of ['dark', 'light']) test(`muted series survive a browser-process restart in ${appearance}`, async ({ baseURL }, info) => {
+  const profile = info.outputPath('profile')
+  let context = await chromium.launchPersistentContext(profile, { baseURL, viewport: { width: 1024, height: 900 } })
+  try {
+    const page = await context.newPage()
+    const graph = await seed(page, appearance)
+    const source = await page.evaluate(() => localStorage.getItem('times-tables.scores'))
+    for (const s of series) await graph.getByRole('button', { name: s.name, exact: true }).click()
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.progress') ?? '{}').showRecord)).toBe(false)
+    await context.close()
+    context = await chromium.launchPersistentContext(profile, { baseURL, viewport: { width: 1440, height: 1000 } })
+    const restored = await context.newPage()
+    await restored.goto('/stats')
+    for (const s of series) {
+      const button = restored.getByRole('button', { name: s.name, exact: true })
+      await expect(button).toHaveAttribute('aria-pressed', 'false')
+      await expectMuted(button)
+      await expect(restored.locator(`${s.selector} .recharts-line-curve[d], ${s.dot}`)).toHaveCount(0)
+    }
+    expect(await restored.evaluate(() => localStorage.getItem('times-tables.scores'))).toBe(source)
+  } finally {
+    await context.close()
+  }
+})
+
+async function expectMuted(button: Locator) {
+  await button.page().mouse.move(0, 0)
+  const off = await button.evaluate(e => {
+    const c = getComputedStyle(e)
+    const label = getComputedStyle(e.querySelector('span')!)
+    const path = getComputedStyle(e.querySelector('path')!)
+    const theme = getComputedStyle(e.closest('.radix-themes')!)
+    const rgb = (value: string) => value.match(/[\d.]+/g)!.slice(0, 3).map(Number)
+    const background = rgb(theme.backgroundColor)
+    const contrast = (value: string) => {
+      const luminance = (channels: number[]) => channels.map(v => { const s = v / 255; return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4 }).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0)
+      const values = [luminance(rgb(value)), luminance(background)].sort((a, b) => b - a)
+      return (values[0] + 0.05) / (values[1] + 0.05)
+    }
+    return { decoration: label.textDecorationLine, border: c.borderTopColor, borderStyle: c.borderTopStyle, background: c.backgroundColor, opacity: c.opacity, color: c.color, enabledColor: theme.color, stroke: path.stroke, strokeOpacity: path.strokeOpacity, textContrast: contrast(label.color), swatchContrast: contrast(path.stroke) }
+  })
+  expect(off.decoration).toBe('none')
+  expect(off.borderStyle).not.toBe('dashed')
+  expect(off.border).toBe('rgba(0, 0, 0, 0)')
+  expect(off.background).toBe('rgba(0, 0, 0, 0)')
+  expect(off.color).not.toBe(off.enabledColor)
+  expect(off.opacity).toBe('1')
+  expect(off.strokeOpacity).toBe('1')
+  expect(off.stroke).toBe(off.color)
+  expect(off.textContrast).toBeGreaterThanOrEqual(4.5)
+  expect(off.swatchContrast).toBeGreaterThanOrEqual(3)
+  return off
+}
 
 async function rawGeometry(graph: Locator) {
   return graph.evaluate(e => [...e.querySelectorAll('.recharts-scatter-symbol')].map(p => ({ d: p.getAttribute('d'), transform: p.getAttribute('transform') })))
