@@ -89,7 +89,7 @@ test('keyboard selection and Tab dismissal preserve independent persisted values
     await expect(panel).toBeVisible()
     await page.keyboard.press('Shift+Tab')
     await expect(panel).toHaveCount(0)
-    if (name === 'Progress order') await expect(page.getByRole('region', { name: 'Run statistics', exact: true }).locator('dd').last()).toBeFocused()
+    if (name === 'Progress order') await expect(page.getByRole('button', { name: 'Runs', exact: true })).toBeFocused()
     else if (index > 0) await expect(page.getByRole('combobox', { name: names[index - 1], exact: true })).toBeFocused()
     else await expect(page.getByRole('button', { name: 'Switch to light mode', exact: true })).toBeFocused()
   }

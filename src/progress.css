@@ -1,6 +1,11 @@
 .progress { padding-top: 0; }
 .progress-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
-.progress-controls { display: flex; gap: 12px; }
+.progress-controls { display: flex; align-items: center; gap: 12px; }
+.progress-axis { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--gray-6); border-radius: 6px; }
+.progress-axis button { border: 0; border-radius: 3px; padding: 4px 9px; background: transparent; color: var(--gray-11); font: inherit; font-size: 12px; cursor: pointer; }
+.progress-axis button:hover { color: var(--gray-12); }
+.progress-axis button[aria-pressed="true"] { background: var(--gray-4); color: var(--gray-12); }
+.progress-axis button:focus-visible { outline: 2px solid var(--accent-11); outline-offset: 2px; }
 .progress-controls select { border-color: transparent; background: transparent; color: var(--gray-11); font-size: 12px; }
 .progress-controls select:hover { color: var(--gray-12); background: var(--gray-3); }
 .progress-controls option { color: var(--gray-12); background: var(--gray-2); }

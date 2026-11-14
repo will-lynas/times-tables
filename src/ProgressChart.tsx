@@ -16,7 +16,10 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
   const progress = useMemo(() => buildProgress(scores, selection), [scores, selection])
   const perfect = progress.points.filter(point => point.perfect)
   const other = progress.points.filter(point => !point.perfect)
-  const domain = progressTimeDomain(progress.points)
+  const runs = selection.axisMode === 'runs'
+  const count = progress.points.length
+  const domain: [number, number] = runs ? count > 1 ? [1, count] : [0, 2] : progressTimeDomain(progress.points)
+  const runTicks = Array.from({ length: Math.min(count, 6) }, (_, i) => Math.round(1 + i * (count - 1) / (Math.min(count, 6) - 1 || 1)))
   const factors = selection.factors ?? presetFactors(selection.size)
   const settingLabel = `${selection.mode === 'ordered' ? 'Ordered' : 'Shuffled'} · ${labelFactors(factors)}`
 
@@ -32,6 +35,10 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
     <div className="progress-heading">
       <h2 id="progress-heading">Progress</h2>
       <div className="progress-controls" role="group" aria-label="Progress settings">
+        <div className="progress-axis" role="group" aria-label="Graph x-axis">
+          <button type="button" aria-pressed={!runs} onClick={() => choose({ axisMode: 'time' })}>Time</button>
+          <button type="button" aria-pressed={runs} onClick={() => choose({ axisMode: 'runs' })}>Runs</button>
+        </div>
         <StyledSelect label="Progress order" value={selection.mode} onChange={value => choose({ mode: value as ProgressSelection['mode'] })}
           options={[{ value: 'ordered', label: 'Ordered' }, { value: 'shuffled', label: 'Shuffled' }]} />
         <StyledSelect label="Progress size" sizes value={factorOption(factors)} onChange={value => {
@@ -42,10 +49,11 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
     </div>
     {selection.warning && <p className="storage-warning" role="alert">{selection.warning}</p>}
     {progress.points.length === 0 ? <p className="progress-empty">No rounds for {settingLabel}.</p> : <>
-      <div className="progress-plot" role="img" aria-label={`Duration by date: ${settingLabel}`} aria-describedby="progress-method">
+      <div className="progress-plot" role="img" aria-label={`Duration by ${runs ? 'run number' : 'date'}: ${settingLabel}`} aria-describedby="progress-method">
         <ResponsiveContainer width="100%" height={280} minWidth={0}>
           <ScatterChart margin={{ top: 12, right: 12, bottom: 4, left: 0 }} accessibilityLayer>
-            <XAxis hide type="number" dataKey="timestamp" scale="time" domain={domain} tickCount={6} padding={{ left: 12, right: 12 }} />
+            <XAxis height={20} type="number" dataKey="x" scale={runs ? 'linear' : 'time'} domain={domain}
+              ticks={runs ? runTicks : undefined} allowDecimals={false} tick={runs ? { fill: 'var(--gray-11)', fontSize: 11 } : false} tickLine={false} axisLine={false} padding={{ left: 12, right: 12 }} />
             <YAxis type="number" dataKey="seconds" name="Duration" domain={[0, 'auto']} tickCount={5} width={76}
               tickFormatter={formatDuration} tick={{ fill: 'var(--gray-11)', fontSize: 11 }} tickLine={false} axisLine={false} padding={{ top: 8, bottom: 8 }} />
             <CartesianGrid vertical={false} syncWithTicks stroke="var(--gray-11)" strokeOpacity={0.12} />
@@ -59,6 +67,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
                   <span className="progress-tooltip-status">{point.status === 'complete' ? 'Complete' : 'Partial'}</span>
                 </div>
                 <dl>
+                  {runs && <><dt>Run</dt><dd>{point.runNumber}</dd></>}
                   <dt>Accuracy</dt><dd>{Number(point.accuracy.toFixed(1))}%</dd>
                   <dt>Answered</dt><dd>{point.attempted} / {point.total}</dd>
                   {point.perfect && <>
@@ -85,7 +94,7 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
           </ScatterChart>
         </ResponsiveContainer>
       </div>
-      <span id="progress-method" className="visually-hidden">Unconnected points are saved rounds at their completion dates; faint points are partial or inaccurate. The faded and stronger yellow lines are trailing averages of up to 10 and 100 perfect complete rounds respectively for this exact order and factor set, using fewer rounds during warm-up and never filling missing observations with zeros. The contrasting best-time staircase is the cumulative minimum perfect complete duration: it begins at the first eligible round and steps down only at a strictly faster round's actual timestamp. Dates use your local time zone. Identical timestamps retain saved order.</span>
+      <span id="progress-method" className="visually-hidden">Unconnected points are saved rounds; Time spaces their completion dates proportionally, while Runs equally spaces all saved observations in chronological order starting at 1, including partial and inaccurate rounds. The faded and stronger yellow lines are trailing averages of up to 10 and 100 perfect complete rounds respectively for this exact order and factor set, using fewer rounds during warm-up and never filling missing observations with zeros. The contrasting best-time staircase is the cumulative minimum perfect complete duration: it begins at the first eligible round and steps down only at a strictly faster round's actual timestamp or run number. Dates use your local time zone. Identical timestamps retain saved order.</span>
       <div className="progress-data">
         <table className="score-table" aria-label="Progress data">
           <thead><tr><th scope="col">Date</th><th scope="col">Status</th><th scope="col">Attempted</th><th scope="col">Accuracy</th><th scope="col">Duration</th></tr></thead>

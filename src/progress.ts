@@ -2,8 +2,10 @@ import type { Mode } from './game'
 import { scoreFactors, type Score } from './scores'
 import { factorKey, presetFactors } from './factors'
 
-export type ProgressSelection = { mode: Mode; size: number; factors?: number[]; warning?: string }
+export type ProgressSelection = { mode: Mode; size: number; factors?: number[]; axisMode?: 'time' | 'runs'; warning?: string }
 export type ProgressPoint = Score & {
+  runNumber: number
+  x: number
   timestamp: number
   seconds: number
   perfect: boolean
@@ -26,7 +28,7 @@ export function buildProgress(scores: readonly Score[], selection: ProgressSelec
   const window: number[] = []
   let perfectCount = 0
   let bestSeconds: number | null = null
-  const points: ProgressPoint[] = selected.map(score => {
+  const points: ProgressPoint[] = selected.map((score, index) => {
     const perfect = score.status === 'complete' && score.total === scoreFactors(score).length ** 2
       && score.attempted === score.total && score.correct === score.total
     const isRecord = perfect && (bestSeconds === null || score.elapsedMs / 1000 < bestSeconds)
@@ -39,7 +41,8 @@ export function buildProgress(scores: readonly Score[], selection: ProgressSelec
     const recent10 = window.slice(-10)
     const averageSeconds = perfect ? recent10.reduce((sum, seconds) => sum + seconds, 0) / recent10.length : null
     const average100Seconds = perfect ? window.reduce((sum, seconds) => sum + seconds, 0) / window.length : null
-    return { ...score, timestamp: Date.parse(score.completedAt), seconds: score.elapsedMs / 1000,
+    return { ...score, runNumber: index + 1, x: selection.axisMode === 'runs' ? index + 1 : Date.parse(score.completedAt),
+      timestamp: Date.parse(score.completedAt), seconds: score.elapsedMs / 1000,
       perfect, accuracy: score.attempted === 0 ? 0 : score.correct / score.attempted * 100,
       averageSeconds, averageCount: perfect ? recent10.length : 0,
       average100Seconds, average100Count: perfect ? window.length : 0, bestSeconds, isRecord }

@@ -8,7 +8,7 @@ All application data lives in this origin's browser `localStorage`. There is no 
 | --- | --- |
 | `times-tables.scores` | `{version: 4, scores: [...]}`. Stable run IDs; append/union, never snapshot replacement. History, rankings and graphs read the same records. |
 | `times-tables.settings` | Flat version 1 object; accepts legacy unversioned objects. Gameplay, retained custom factors and independent history filters. Saves contain only deliberate patches. |
-| `times-tables.progress` | Flat version 1 object; accepts legacy unversioned objects. Independent graph order and exact factor-set selection, plus optional graph preferences. |
+| `times-tables.progress` | Flat version 1 object; accepts legacy unversioned objects. Independent graph order and exact factor-set selection, plus optional `axisMode` (`time` or `runs`; absent means Time). Axis changes use the same deliberate-patch intent journal and locked replay as other graph preferences; unknown axis formats are read-only. |
 | `times-tables.theme` | Literal `dark` or `light`. Unknown formats are read-only. |
 | `times-tables.run-tracking` | Version 1 metadata with `incomplete` history marker. Existing metadata is not rewritten by ordinary starts. |
 | `times-tables.run-start.<id>` | Version 1 immutable start event: mode and exact factors. A completed/partial score reuses this ID; cancellation does not delete the start. |
