@@ -120,6 +120,47 @@ for (const raw of ['{broken', '{"version":2,"mode":"ordered","size":2}', ...seri
   expect(await page.evaluate(() => localStorage.getItem('times-tables.progress'))).toBe(raw)
 })
 
+test('legend labels have no state glyphs or reserved slots when shown or hidden', async ({ page }, info) => {
+  const graph = await seed(page)
+  for (const appearance of ['dark', 'light']) for (const width of [1440, 1024]) {
+    await page.evaluate(appearance => localStorage.setItem('times-tables.theme', appearance), appearance)
+    await page.setViewportSize({ width, height: 1000 })
+    await page.reload()
+    for (const shown of [true, false]) {
+      for (const s of series) {
+        const button = graph.getByRole('button', { name: s.name, exact: true })
+        if (await button.getAttribute('aria-pressed') !== String(shown)) await button.click()
+        await expect(button).toHaveAttribute('aria-pressed', String(shown))
+        await expect(button).toHaveText(s.name)
+        await expect(button.locator('svg')).toHaveCount(1)
+        await expect(button.locator('span')).toHaveCount(1)
+        const layout = await button.evaluate(e => {
+          const style = getComputedStyle(e)
+          const swatch = e.querySelector('svg')!.getBoundingClientRect()
+          const label = e.querySelector('span')!.getBoundingClientRect()
+          return {
+            width: e.getBoundingClientRect().width,
+            content: swatch.width + label.width + parseFloat(style.columnGap) + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth),
+            before: getComputedStyle(e, '::before').content,
+            after: getComputedStyle(e, '::after').content,
+          }
+        })
+        expect(Math.abs(layout.width - layout.content)).toBeLessThan(1)
+        expect([layout.before, layout.after]).toEqual(['none', 'none'])
+        await expect(graph.locator(`${s.selector} .recharts-line-curve[d]`)).toHaveCount(shown ? 1 : 0)
+      }
+      await graph.screenshot({ path: info.outputPath(`no-glyphs-${appearance}-${width}-${shown ? 'on' : 'off'}.png`) })
+    }
+    await page.reload()
+    for (const s of series) {
+      const button = graph.getByRole('button', { name: s.name, exact: true })
+      await expect(button).toHaveAttribute('aria-pressed', 'false')
+      await expect(button).toHaveText(s.name)
+      await button.click()
+    }
+  }
+})
+
 async function rawGeometry(graph: Locator) {
   return graph.evaluate(e => [...e.querySelectorAll('.recharts-scatter-symbol')].map(p => ({ d: p.getAttribute('d'), transform: p.getAttribute('transform') })))
 }

@@ -17,7 +17,6 @@
 .progress-legend button[aria-pressed="false"] > span:first-of-type { text-decoration: line-through; }
 .progress-legend button:focus-visible { outline: 2px solid var(--accent-11); outline-offset: 2px; }
 .progress-legend svg { flex: none; }
-.progress-legend-state { width: 10px; text-align: center; }
 .progress-plot { height: 280px; margin-top: 8px; }
 .progress .recharts-scatter-symbol { cursor: crosshair; }
 .progress .recharts-line, .progress .recharts-line-dots { pointer-events: none; }
