@@ -33,7 +33,7 @@ test('cancel discards a running round without changing saved scores', async ({ p
   await expect(page.getByRole('radio', { name: 'Ordered', exact: true })).toBeEnabled()
   await expect(page.getByRole('radio', { name: 'Shuffled', exact: true })).toBeEnabled()
   await expect(page.getByRole('radio', { name: 'Shuffled', exact: true })).toBeChecked()
-  await expect(page.getByRole('button', { name: 'Finish', exact: true })).toBeDisabled()
+  await expect(page.getByRole('button', { name: /^Finish/, includeHidden: true })).toHaveCount(0)
   await page.clock.runFor(10000)
   await expect(page.getByRole('timer')).toHaveText('0:00.0')
   await showStats(page)

@@ -323,7 +323,7 @@ export default function App() {
       </div>
       <div className="grid-footer">
         <p>{running ? `Shift + Enter finish · ${settings.spaceToAdvance ? 'Space / Tab' : 'Tab'} next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit` : null}</p>
-        {!result && <Button type="button" disabled={!running || filled === 0} onClick={finish} aria-keyshortcuts="Shift+Enter">{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
+        {running && page === 'practice' && <Button type="button" disabled={filled === 0} onClick={finish} aria-keyshortcuts="Shift+Enter">{filled > 0 && filled < total ? 'Finish early' : 'Finish'}</Button>}
       </div>
 
       </div>
