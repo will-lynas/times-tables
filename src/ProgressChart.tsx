@@ -11,7 +11,7 @@ export default function ProgressChart({ scores, selection, onSelectionChange }: 
   const progress = useMemo(() => buildProgress(scores, selection), [scores, selection])
   const perfect = progress.points.filter(point => point.perfect)
   const other = progress.points.filter(point => !point.perfect)
-  const runs = selection.axisMode === 'runs'
+  const runs = selection.axisMode !== 'time'
   const showAverage5 = selection.showAverage5 !== false
   const showAverage25 = selection.showAverage25 !== false
   const showRecord = selection.showRecord !== false
@@ -25,8 +25,8 @@ export default function ProgressChart({ scores, selection, onSelectionChange }: 
     <div className="progress-heading">
       <h2 id="progress-heading">Progress</h2>
       <div className="progress-axis" role="group" aria-label="Graph x-axis">
-        <button type="button" aria-pressed={!runs} onClick={() => onSelectionChange({ axisMode: 'time' })}>Time</button>
         <button type="button" aria-pressed={runs} onClick={() => onSelectionChange({ axisMode: 'runs' })}>Runs</button>
+        <button type="button" aria-pressed={!runs} onClick={() => onSelectionChange({ axisMode: 'time' })}>Time</button>
       </div>
     </div>
     <div className="progress-legend" role="group" aria-label="Chart series">

@@ -8,7 +8,8 @@ const run = (id: string, day: number, change: Partial<Score> = {}): Score => ({ 
 test('Runs projects every selected observation in stable chronological order without compressing eligible indices', () => {
   const scores = [run('late', 10, { elapsedMs: 0 }), run('partial', 0, { status: 'partial', attempted: 1, correct: 1 }), run('first', 1), run('duplicate', 1, { elapsedMs: 40000 }), run('wrong', 3, { correct: 3 }), run('other-set', 4, { factors: [2, 3] }), run('other-mode', 5, { mode: 'shuffled' })]
   const before = JSON.stringify(scores)
-  const time = buildProgress(scores, selection).points
+  const time = buildProgress(scores, { ...selection, axisMode: 'time' }).points
+  expect(buildProgress(scores, selection)).toEqual(buildProgress(scores, { ...selection, axisMode: 'runs' }))
   const runs = buildProgress(scores, { ...selection, axisMode: 'runs' }).points
   expect(runs.map(p => [p.id, p.runNumber, p.x])).toEqual([['partial', 1, 1], ['first', 2, 2], ['duplicate', 3, 3], ['wrong', 4, 4], ['late', 5, 5]])
   expect(time.map(p => p.x)).toEqual(time.map(p => p.timestamp))

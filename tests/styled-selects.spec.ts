@@ -56,6 +56,7 @@ test('keyboard settings and Tab dismissal preserve shared selection without play
   await order.getByRole('radio', { name: 'Ordered', exact: true }).focus()
   await page.keyboard.press('ArrowRight')
   await expect(order.getByRole('radio', { name: 'Shuffled', exact: true })).toBeChecked()
+  await expect(order.getByRole('radio', { name: 'Shuffled', exact: true })).toBeFocused()
   const trigger = page.getByRole('combobox', { name: 'Stats size', exact: true })
   await trigger.focus()
   await page.keyboard.press('Space')

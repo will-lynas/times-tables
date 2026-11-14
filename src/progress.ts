@@ -41,7 +41,7 @@ export function buildProgress(scores: readonly Score[], selection: ProgressSelec
     const recent5 = window.slice(-5)
     const average5Seconds = perfect ? recent5.reduce((sum, seconds) => sum + seconds, 0) / recent5.length : null
     const average25Seconds = perfect ? window.reduce((sum, seconds) => sum + seconds, 0) / window.length : null
-    return { ...score, runNumber: index + 1, x: selection.axisMode === 'runs' ? index + 1 : Date.parse(score.completedAt),
+    return { ...score, runNumber: index + 1, x: selection.axisMode !== 'time' ? index + 1 : Date.parse(score.completedAt),
       timestamp: Date.parse(score.completedAt), seconds: score.elapsedMs / 1000,
       perfect, accuracy: score.attempted === 0 ? 0 : score.correct / score.attempted * 100,
       average5Seconds, average5Count: perfect ? recent5.length : 0,

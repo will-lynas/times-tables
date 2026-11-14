@@ -31,6 +31,7 @@ test('history, PB and graph distinguish same-cardinality factor sets, including 
   await expect(history.getByRole('row')).toHaveCount(2)
   await expect(page.locator('.score-heading')).toHaveText('Score history')
   await chooseFilter(filter, { label: '{7, 8, 9, 11, 13}' })
+  await page.getByRole('button', { name: 'Time', exact: true }).click()
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
   await expect(graph.locator('.progress-perfect .recharts-scatter-symbol')).toHaveCount(2)
   await expect(graph.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(2)

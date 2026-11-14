@@ -20,6 +20,7 @@ async function seed(page: Page, records = scores) {
     localStorage.setItem('progress-test-seeded', 'true')
   }, records)
   await page.goto('/progress')
+  await page.getByRole('button', { name: 'Time', exact: true }).click()
 }
 
 for (const appearance of ['dark', 'light'] as const) {
@@ -194,6 +195,7 @@ test('single zero-duration point is visible; duplicate timestamps and large outl
 test('empty graph stays usable without storage and never shows synthetic data', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(window, 'localStorage', { get() { throw new DOMException('Blocked', 'SecurityError') } }))
   await page.goto('/progress')
+  await page.getByRole('button', { name: 'Time', exact: true }).click()
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
   await expect(graph).toContainText('No rounds for Shuffled · 12 × 12.')
   await chooseFilter(page.getByRole('radiogroup', { name: 'Stats order' }), 'ordered')

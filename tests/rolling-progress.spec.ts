@@ -15,6 +15,7 @@ async function seed(page: Page, scores: Score[], appearance: string) {
     localStorage.setItem('times-tables.scores', JSON.stringify({ version: 4, scores, unknownMetadata: { retained: true } }))
   }, { scores, appearance })
   await page.goto('/stats')
+  await page.getByRole('button', { name: 'Time', exact: true }).click()
   if (appearance === 'light') await page.getByRole('button', { name: 'Switch to light mode' }).click()
   const graph = page.getByRole('region', { name: 'Progress', exact: true })
   await expect(graph.locator('.progress-perfect .recharts-scatter-symbol')).toHaveCount(scores.filter(s => s.status === 'complete' && s.correct === s.total).length)

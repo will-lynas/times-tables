@@ -5,7 +5,13 @@ const record = (id: string, factors: number[], mode = 'ordered', extra = {}) => 
 const scores = [record('preset', [1, 2]), record('a1', [2, 7]), record('a2', [2, 7], 'ordered', { elapsedMs: 20000 }), record('apartial', [2, 7], 'ordered', { status: 'partial', attempted: 1, correct: 1 }), record('awrong', [2, 7], 'ordered', { correct: 3 }), record('b1', [3, 8]), record('shuffle', [2, 7], 'shuffled')]
 
 async function population(page: Page, ids: string[], values: string[], perfect: number, other: number) {
-  await expect(page.getByRole('region', { name: 'Run statistics' }).locator('dd')).toHaveText(values)
+  for (const axis of ['Runs', 'Time']) {
+    await page.getByRole('button', { name: axis, exact: true }).click()
+    await expect(page.getByRole('region', { name: 'Run statistics' }).locator('dd')).toHaveText(values)
+    await expect(page.locator('.progress-perfect .recharts-scatter-symbol')).toHaveCount(perfect)
+    await expect(page.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(other)
+    expect(await page.getByRole('table', { name: 'Score history', exact: true }).locator('tbody tr').evaluateAll(rows => rows.map(row => row.getAttribute('data-score-id')))).toEqual(ids)
+  }
   expect(await page.getByRole('table', { name: 'Score history', exact: true }).locator('tbody tr').evaluateAll(rows => rows.map(row => row.getAttribute('data-score-id')))).toEqual(ids)
   await expect(page.locator('.progress-perfect .recharts-scatter-symbol')).toHaveCount(perfect)
   await expect(page.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(other)
