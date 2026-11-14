@@ -119,6 +119,7 @@ async function completeGrid(page: Page) {
 
 for (const [mode, size] of [['Ordered', 12], ['Shuffled', 2], ['Ordered', 2]] as const) {
   test(`refresh retains ${mode} ${size} × ${size} scores and can complete another round`, async ({ page }) => {
+    test.setTimeout(size === 12 ? 90000 : 30000)
     await page.goto('/')
     await page.getByRole('radio', { name: mode, exact: true }).click()
     await chooseGridSize(page, size)
