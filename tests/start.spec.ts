@@ -107,14 +107,14 @@ test('does not start behind an open popup but ignores closed popups', async ({ p
   await expect(page.getByRole('textbox').first()).toBeFocused()
 })
 
-test('Space stays in the answer without inserting text or scrolling, including the last cell', async ({ page }) => {
+test('Space advances without inserting text or scrolling and stops at the last cell', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 800 })
   await page.goto('/')
   await page.keyboard.press('Enter')
   const cells = page.getByRole('textbox')
   await cells.first().fill('12')
   await cells.first().press('Space')
-  await expect(cells.first()).toBeFocused()
+  await expect(cells.nth(1)).toBeFocused()
   await expect(cells.first()).toHaveValue('12')
   await expect(cells.nth(1)).toHaveValue('')
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)

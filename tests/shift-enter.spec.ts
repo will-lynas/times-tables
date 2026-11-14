@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test'
 import { SCORE_KEY } from '../src/scores'
 import { chooseGridSize } from './helpers'
 
-test('plain Enter and Space preserve active answer focus and values, even when full', async ({ page }) => {
+test('plain Enter preserves active answer focus and values, even when full', async ({ page }) => {
   await page.goto('/')
   await chooseGridSize(page, 2)
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
   await page.getByRole('button', { name: 'Start', exact: true }).press('Enter')
   const cells = page.getByRole('textbox')
-  for (const key of ['Enter', 'Space', 'Shift+Enter']) {
+  for (const key of ['Enter', 'Shift+Enter']) {
     await cells.first().press(key)
     await expect(cells.first()).toBeFocused()
     await expect(cells.first()).toHaveValue('')
@@ -16,7 +16,7 @@ test('plain Enter and Space preserve active answer focus and values, even when f
   }
   for (const [index, answer] of ['1', '2', '2', '4'].entries()) {
     await cells.nth(index).fill(answer)
-    for (const key of ['Enter', 'Space']) {
+    for (const key of ['Enter']) {
       await cells.nth(index).press(key)
       await expect(cells.nth(index)).not.toHaveAttribute('readonly')
       await expect(cells.nth(index)).toBeFocused()
@@ -74,7 +74,6 @@ test('answer Enter cannot trigger native implicit form submission', async ({ pag
   })
   const cell = page.getByRole('textbox').first()
   await cell.press('Enter')
-  await cell.press('Space')
   await expect(cell).toBeFocused()
   await expect(cell).toHaveValue('1')
   await expect(page.locator('form')).toHaveAttribute('data-submissions', '0')

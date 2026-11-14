@@ -217,7 +217,7 @@ test('Shift+Enter completion keeps history filters independent and persists roun
 
 test('advertises Shift+Enter finish and preserves the navigation and cancel keyboard clues', async ({ page }) => {
   await startSmall(page)
-  await expect(page.getByText('Shift + Enter finish · Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit', { exact: true })).toBeVisible()
+  await expect(page.getByText('Shift + Enter finish · Space / Tab next · Esc cancel · Shift + Tab back · Arrow keys move · Click to edit', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Finish', exact: true })).toHaveAttribute('aria-keyshortcuts', 'Shift+Enter')
 })
 
