@@ -4,7 +4,7 @@ import { loadScores, saveScores, rankScores, SCORE_KEY, type Score } from './sco
 
 function memoryStorage() {
   const values = new Map<string, string>()
-  return { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value) } }
+  return { get length() { return values.size }, key: (index: number) => [...values.keys()][index] ?? null, getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value) } }
 }
 
 test.each([
@@ -22,6 +22,8 @@ test.each([
   const result = loadScores(() => storage)
   expect(result.scores).toEqual([])
   expect(result.warning).toMatch(/could not be read/i)
+  expect(storage.getItem(SCORE_KEY)).toBe(raw)
+  expect(await saveScores([score('new', 144, 10)], () => storage)).toMatch(/not saved/i)
   expect(storage.getItem(SCORE_KEY)).toBe(raw)
 })
 

@@ -1,8 +1,10 @@
+import { parsePreserved } from './preservedJson'
 import type { Mode } from './game'
 import { canonicalFactors, factorKey, presetFactors } from './factors'
 
 export const SCORE_KEY = 'times-tables.scores'
-import { backup, browserStorage, lockedWrite, mergeRecord, object } from './storage'
+import { backup, browserStorage, mergeRecord, object, type StoragePort } from './storage'
+import { durableWrite, recoverWrites } from './writeJournal'
 
 function isScore(value: unknown): value is Score {
   if (typeof value !== 'object' || value === null) return false
@@ -21,7 +23,7 @@ function isScore(value: unknown): value is Score {
 
 function readScores(raw: string | null) {
   if (raw === null) return { data: { version: 4, scores: [] } as Record<string, unknown>, scores: [] as Score[] }
-  const data: unknown = JSON.parse(raw)
+  const data: unknown = parsePreserved(raw)
   if (!object(data) || ![1, 2, 3, 4].includes(data.version as number) || !Array.isArray(data.scores)) throw new Error('Unsupported scores')
   let records = data.scores
   // Explicit additive steps. Reserved fields present in a legacy record must
@@ -49,24 +51,27 @@ export function loadScores(getStorage = browserStorage): { scores: Score[]; warn
   }
 }
 
-// Append/union, never replacement. All app writers participate in Web Locks.
-export async function saveScores(scores: Score[], getStorage = browserStorage): Promise<string | null> {
-  const warning = await lockedWrite(SCORE_KEY, () => {
-    const storage = getStorage()
-    const raw = storage.getItem(SCORE_KEY)
-    const existing = readScores(raw)
-    const records = [...existing.scores]
-    for (const score of scores) {
-      const incoming = score.factors === undefined ? { ...score, factors: presetFactors(score.size) } : score
-      if (!isScore(incoming)) throw new Error('Invalid score')
-      const index = records.findIndex(item => item.id === incoming.id)
-      if (index < 0) records.push(incoming)
-      else records[index] = mergeRecord(records[index], incoming) as Score
-    }
-    if (raw !== null && existing.data.version !== 4) backup(storage, SCORE_KEY, existing.data.version as number, raw)
-    storage.setItem(SCORE_KEY, JSON.stringify({ ...existing.data, version: 4, scores: records }))
-  })
-  return warning ? `Score not saved: ${warning}` : null
+function applyScores(storage: StoragePort, payload: unknown) {
+  if (!Array.isArray(payload)) throw new Error('Invalid score intent')
+  const raw = storage.getItem(SCORE_KEY)
+  const existing = readScores(raw)
+  const records = [...existing.scores]
+  for (const score of payload) {
+    if (!object(score)) throw new Error('Invalid score')
+    const incoming = score.factors === undefined ? { ...score, factors: presetFactors(score.size as number) } : score
+    if (!isScore(incoming)) throw new Error('Invalid score')
+    const index = records.findIndex(item => item.id === incoming.id)
+    if (index < 0) records.push(incoming)
+    else records[index] = mergeRecord(records[index], incoming) as Score
+  }
+  if (raw !== null && existing.data.version !== 4) backup(storage, SCORE_KEY, existing.data.version as number, raw)
+  storage.setItem(SCORE_KEY, JSON.stringify({ ...existing.data, version: 4, scores: records }))
+}
+export function recoverScores(getStorage = browserStorage) { return recoverWrites(SCORE_KEY, applyScores, getStorage) }
+
+// Append/union, never replacement. Journal synchronously before awaiting locks.
+export function saveScores(scores: Score[], getStorage = browserStorage): Promise<string | null> {
+  return durableWrite(SCORE_KEY, scores, applyScores, getStorage).then(warning => warning ? `Score not saved: ${warning}` : null)
 }
 
 export type Score = {

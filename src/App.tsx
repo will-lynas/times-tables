@@ -105,7 +105,8 @@ export default function App() {
     if (grid !== null || runId.current !== null || factors.length === 0) return
     runId.current = crypto.randomUUID()
     const latest = loadScores()
-    setTracking(latest.warning ? { starts: [], incomplete: true, warning: latest.warning } : recordRunStart({ id: runId.current, mode, factors }, latest.scores))
+    if (latest.warning) setTracking({ starts: [], incomplete: true, warning: latest.warning })
+    else void recordRunStart({ id: runId.current, mode, factors }, latest.scores).then(setTracking)
     finished.current = false
     setGrid(createGrid(mode, Math.random, factors))
     setElapsed(0)

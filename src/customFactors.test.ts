@@ -6,7 +6,7 @@ import { canonicalFactors, factorKey, factorLabel, factorOption, factorsFromOpti
 afterEach(() => vi.unstubAllGlobals())
 function settingsStorage(raw: string | null = null) {
   const values = new Map(raw === null ? [] : [['times-tables.settings', raw]])
-  vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) })
+  vi.stubGlobal('localStorage', { get length() { return values.size }, key: (index: number) => [...values.keys()][index] ?? null, getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) })
   return values
 }
 
@@ -80,7 +80,7 @@ test('isolates rankings and chronological graph/averages by canonical set, never
 test('roundtrips v4 factors and preserves v1/v2/v3 legacy fields and storage bytes', async () => {
   let raw: string | null = null
   const backups = new Map<string, string>()
-  const storage = { getItem: (key: string) => key === 'times-tables.scores' ? raw : backups.get(key) ?? null, setItem: (key: string, value: string) => { if (key === 'times-tables.scores') raw = value; else backups.set(key, value) } }
+  const storage = { get length() { return backups.size + 1 }, key: (index: number) => ['times-tables.scores', ...backups.keys()][index] ?? null, getItem: (key: string) => key === 'times-tables.scores' ? raw : backups.get(key) ?? null, setItem: (key: string, value: string) => { if (key === 'times-tables.scores') raw = value; else backups.set(key, value) } }
   for (const version of [1, 2, 3]) {
     const old = { ...round('legacy', Array.from({ length: version === 1 ? 12 : 5 }, (_, i) => i + 1)), factors: undefined }
     if (version === 3) Object.assign(old, { status: 'partial', correct: 1, attempted: 2 })
@@ -100,7 +100,7 @@ test.each([[], [0, 7], [7, 21], [7, '8'], [7, null], [NaN], [2.5]].map(factors =
   let raw = JSON.stringify({ version: 4, scores: [{ ...round('bad', a), factors }] })
   const original = raw
   const backups = new Map<string, string>()
-  const storage = { getItem: (key: string) => key === 'times-tables.scores' ? raw : backups.get(key) ?? null, setItem: (key: string, value: string) => { if (key === 'times-tables.scores') raw = value; else backups.set(key, value) } }
+  const storage = { get length() { return backups.size + 1 }, key: (index: number) => ['times-tables.scores', ...backups.keys()][index] ?? null, getItem: (key: string) => key === 'times-tables.scores' ? raw : backups.get(key) ?? null, setItem: (key: string, value: string) => { if (key === 'times-tables.scores') raw = value; else backups.set(key, value) } }
   expect(loadScores(() => storage).warning).toMatch(/could not be read/)
   expect(await saveScores([round('new', a)], () => storage)).toMatch(/not saved/i)
   expect(raw).toBe(original)
@@ -110,7 +110,7 @@ test('does not save inconsistent factor count and keeps existing valid score byt
   let raw = JSON.stringify({ version: 4, scores: [round('old', a)] })
   const original = raw
   const backups = new Map<string, string>()
-  const storage = { getItem: (key: string) => key === 'times-tables.scores' ? raw : backups.get(key) ?? null, setItem: (key: string, value: string) => { if (key === 'times-tables.scores') raw = value; else backups.set(key, value) } }
+  const storage = { get length() { return backups.size + 1 }, key: (index: number) => ['times-tables.scores', ...backups.keys()][index] ?? null, getItem: (key: string) => key === 'times-tables.scores' ? raw : backups.get(key) ?? null, setItem: (key: string, value: string) => { if (key === 'times-tables.scores') raw = value; else backups.set(key, value) } }
   expect(await saveScores([{ ...round('bad', a), factors: [20] }], () => storage)).toMatch(/not saved/i)
   expect(raw).toBe(original)
 })

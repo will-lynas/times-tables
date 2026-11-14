@@ -1,3 +1,4 @@
+import { parsePreserved } from './preservedJson'
 // All cooperating tabs serialize read/modify/write through the same origin lock.
 export type StoragePort = Pick<Storage, 'getItem' | 'setItem'>
 export type StorageAccess = () => StoragePort
@@ -24,7 +25,7 @@ export async function lockedWrite(key: string, write: () => void): Promise<strin
 export function backup(storage: StoragePort, key: string, version: number | 'unversioned', raw: string) {
   const backupKey = `${key}.backup.v${version}`
   const existing = storage.getItem(backupKey)
-  const originals: unknown = existing === null ? [] : JSON.parse(existing)
+  const originals: unknown = existing === null ? [] : parsePreserved(existing)
   if (!Array.isArray(originals) || !originals.every(value => typeof value === 'string')) throw new Error('Unreadable backup')
   if (!originals.includes(raw)) {
     const next = JSON.stringify([...originals, raw])
@@ -37,22 +38,22 @@ export function backup(storage: StoragePort, key: string, version: number | 'unv
 export function readPreferences(storage: StoragePort, key: string) {
   const raw = storage.getItem(key)
   if (raw === null) return { raw, data: {} as Record<string, unknown> }
-  const data: unknown = JSON.parse(raw)
+  const data: unknown = parsePreserved(raw)
   if (!object(data) || ('version' in data && data.version !== 1)) throw new Error('Unsupported preferences')
   return { raw, data }
 }
 
-export function writePreferences(key: string, change: Record<string, unknown>, validate: (data: Record<string, unknown>) => boolean, defaults: Record<string, unknown> = {}) {
-  return lockedWrite(key, () => {
-    const storage = browserStorage()
+export function preferenceWriter(key: string, validate: (data: Record<string, unknown>) => boolean) {
+  return (storage: StoragePort, payload: unknown) => {
+    if (!object(payload) || !object(payload.change) || !object(payload.defaults)) throw new Error('Invalid preference intent')
     const { raw, data } = readPreferences(storage, key)
     if (!validate(data)) throw new Error('Invalid original preferences')
-    const { warning: _warning, ...patch } = change
-    const next = { ...(raw === null ? defaults : data), ...patch, version: 1 }
+    const { warning: _warning, ...patch } = payload.change
+    const next = { ...(raw === null ? payload.defaults : data), ...patch, version: 1 }
     if (!validate(next)) throw new Error('Invalid preferences')
     if (raw !== null && !('version' in data)) backup(storage, key, 'unversioned', raw)
     storage.setItem(key, JSON.stringify(next))
-  })
+  }
 }
 
 // Merge append-only records without overwriting conflicting values, including

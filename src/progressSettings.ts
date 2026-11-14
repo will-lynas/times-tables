@@ -1,6 +1,7 @@
 import type { ProgressSelection } from './progress'
 import { canonicalFactors } from './factors'
-import { browserStorage, readPreferences, STORAGE_WARNING, writePreferences } from './storage'
+import { browserStorage, readPreferences, STORAGE_WARNING, preferenceWriter } from './storage'
+import { durableWrite, recoverWrites } from './writeJournal'
 
 const KEY = 'times-tables.progress'
 
@@ -35,6 +36,10 @@ function validSelection(data: Record<string, unknown>): boolean {
   } catch { return false }
 }
 
+export function recoverProgressSelection() {
+  return recoverWrites(KEY, preferenceWriter(KEY, validSelection), browserStorage)
+}
+
 export function saveProgressSelection(change: Partial<ProgressSelection>, defaults?: ProgressSelection): Promise<string | null> {
-  return writePreferences(KEY, change, validSelection, defaults)
+  return durableWrite(KEY, { change, defaults: defaults ?? {} }, preferenceWriter(KEY, validSelection), browserStorage)
 }

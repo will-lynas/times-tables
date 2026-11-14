@@ -7,7 +7,7 @@ afterEach(() => vi.unstubAllGlobals())
 function storage(raw: string | null) {
   const values = new Map(raw === null ? [] : [['times-tables.settings', raw]])
   vi.stubGlobal('localStorage', {
-    getItem: (key: string) => values.get(key) ?? null,
+    get length() { return values.size }, key: (index: number) => [...values.keys()][index] ?? null, getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => { values.set(key, value) },
   })
   return values

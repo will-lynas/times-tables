@@ -7,7 +7,7 @@ import { loadTheme, saveTheme } from './theme'
 export const example: Score = { id: 'synthetic', mode: 'ordered', size: 2, factors: [1, 2], status: 'partial', attempted: 2, correct: 1, total: 4, elapsedMs: 123.456, completedAt: '2026-01-01T00:00:00Z' }
 function memory(raw: string | null, key = SCORE_KEY) {
   const values = new Map<string, string>(raw === null ? [] : [[key, raw]])
-  const storage = { getItem: (k: string) => values.get(k) ?? null, setItem: (k: string, v: string) => { values.set(k, v) } }
+  const storage = { get length() { return values.size }, key: (index: number) => [...values.keys()][index] ?? null, getItem: (k: string) => values.get(k) ?? null, setItem: (k: string, v: string) => { values.set(k, v) } }
   vi.stubGlobal('localStorage', storage)
   return { storage, values }
 }
@@ -29,15 +29,16 @@ test.each(['backup', 'primary'])('failed %s write never destroys migration sourc
   const raw = JSON.stringify({ version: 3, scores: [{ ...example, factors: undefined }] })
   const { storage, values } = memory(raw)
   const attempts: string[] = []
-  const failing = { getItem: storage.getItem, setItem: (key: string, value: string) => {
+  const failing = { get length() { return storage.length }, key: storage.key, getItem: storage.getItem, setItem: (key: string, value: string) => {
     attempts.push(key)
-    if ((failure === 'backup') === key.includes('.backup.')) throw new DOMException('Full', 'QuotaExceededError')
+    if (failure === 'backup' ? key.includes('.backup.') : key === SCORE_KEY) throw new DOMException('Full', 'QuotaExceededError')
     storage.setItem(key, value)
   } }
   expect(await saveScores([{ ...example, id: 'new' }], () => failing)).toMatch(/not saved/i)
   expect(storage.getItem(SCORE_KEY)).toBe(raw)
-  expect(attempts[0]).toContain('.backup.v3')
-  if (failure === 'backup') expect(attempts).toHaveLength(1)
+  expect(attempts[0]).toContain('.intent.')
+  expect(attempts[1]).toContain('.backup.v3')
+  if (failure === 'backup') expect(attempts).toHaveLength(2)
   else expect(JSON.parse(values.get(`${SCORE_KEY}.backup.v3`)!)).toEqual([raw])
 })
 
@@ -108,10 +109,24 @@ test.each([1, 2, 3])('migration v%i backs up exact original bytes before replace
   expect(storage.getItem(SCORE_KEY)).toBe(raw)
   expect(await saveScores([{ ...example, id: 'new' }], () => storage)).toBeNull()
   expect(JSON.parse(storage.getItem(SCORE_KEY)!).scores).toHaveLength(2)
-  expect([...values].some(([key, value]) => key !== SCORE_KEY && JSON.parse(value).includes(raw))).toBe(true)
-  const backups = [...values].filter(([key]) => key !== SCORE_KEY)
+  expect([...values].some(([key, value]) => key.includes('.backup.') && JSON.parse(value).includes(raw))).toBe(true)
+  const backups = [...values].filter(([key]) => key.includes('.backup.'))
   expect(await saveScores(loadScores(() => storage).scores, () => storage)).toBeNull()
-  expect([...values].filter(([key]) => key !== SCORE_KEY)).toEqual(backups)
+  expect([...values].filter(([key]) => key.includes('.backup.'))).toEqual(backups)
+})
+
+test.each(['9007199254740993', '0.100000000000000001', '1e999', '-0'])('refuses numeric JSON coercion in unknown metadata rather than rewriting %s', async number => {
+  const raw = JSON.stringify({ version: 4, scores: [example] }).slice(0, -1) + `,"unknown":${number}}`
+  const { storage } = memory(raw)
+  expect(await saveScores([{ ...example, id: 'new' }], () => storage)).toMatch(/not saved/i)
+  expect(storage.getItem(SCORE_KEY)).toBe(raw)
+})
+
+test('duplicate JSON object members are unsupported, not silently collapsed', async () => {
+  const raw = '{"version":4,"scores":[],"extra":{"field":1,"field":2}}'
+  const { storage } = memory(raw)
+  expect(await saveScores([example], () => storage)).toMatch(/not saved/i)
+  expect(storage.getItem(SCORE_KEY)).toBe(raw)
 })
 
 test('conflicting stable IDs cannot silently replace an existing record', async () => {
