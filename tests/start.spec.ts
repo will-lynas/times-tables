@@ -58,7 +58,7 @@ test('leaves settings and other interactive targets to their own keyboard behavi
     '<div role="button" tabindex="0"><span>Custom button</span></div>',
     '<div role="combobox" tabindex="0">Custom setting</div>',
   ]) {
-    for (const key of ['Enter', ' ']) {
+    for (const key of ['Enter', ' ', 'a', '7', ';', 'ArrowRight']) {
       const prevented = await page.evaluate(({ html, key }) => {
         const fixture = document.createElement('div')
         fixture.innerHTML = html
@@ -83,7 +83,7 @@ test('does not start behind an open popup but ignores closed popups', async ({ p
     '<div role="dialog">Settings</div>', '<div role="alertdialog">Confirm</div>',
     '<div role="menu">Options</div>', '<div role="listbox">Choices</div>',
   ]) {
-    for (const key of ['Enter', ' ']) {
+    for (const key of ['Enter', ' ', 'a', '7', ';', 'ArrowRight']) {
       const prevented = await page.evaluate(({ html, key }) => {
         const fixture = document.createElement('div')
         fixture.innerHTML = html
@@ -139,7 +139,7 @@ test('keeps native keyboard activation of the Start button', async ({ page }) =>
   }
 })
 
-test('does not restart a completed round with Enter or Space', async ({ page }) => {
+test('does not restart a completed round with start keys', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('radio', { name: 'Ordered', exact: true }).click()
   await page.locator('body').click({ position: { x: 8, y: 8 } })
@@ -149,7 +149,7 @@ test('does not restart a completed round with Enter or Space', async ({ page }) 
   for (let index = 0; index < 144; index++) await cells.nth(index).fill('1')
   await page.getByRole('button', { name: 'Finish', exact: true }).click()
   const elapsed = await page.getByRole('timer').innerText()
-  for (const key of ['Enter', 'Space']) {
+  for (const key of ['Enter', 'Space', 'a', '7', ';', 'ArrowRight']) {
     await page.locator('body').click({ position: { x: 8, y: 8 } })
     await page.keyboard.press(key)
     await expect(page.getByRole('heading', { name: 'Round complete', exact: true })).toBeVisible()
@@ -164,7 +164,7 @@ test('offers one prominent Start centred over the disabled grid', async ({ page 
   await page.goto('/')
   const start = page.getByRole('button', { name: 'Start', exact: true })
   await expect(start).toHaveCount(1)
-  await expect(page.getByText('Enter or Space to start', { exact: true })).toBeVisible()
+  await expect(page.getByText('Any key to start', { exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Round controls' }).getByRole('button', { name: 'Start', exact: true })).toHaveCount(0)
   const grid = page.getByRole('table', { name: 'Multiplication grid' })
   await expect(grid.getByRole('textbox').first()).toBeDisabled()
@@ -176,6 +176,6 @@ test('offers one prominent Start centred over the disabled grid', async ({ page 
   expect(Math.abs(startBox.y + startBox.height / 2 - gridBox.y - gridBox.height / 2)).toBeLessThan(32)
   await start.click()
   await expect(start).toHaveCount(0)
-  await expect(page.getByText('Enter or Space to start', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Any key to start', { exact: true })).toHaveCount(0)
   await expect(grid.getByRole('textbox').first()).toBeFocused()
 })

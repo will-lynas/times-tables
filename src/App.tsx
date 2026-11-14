@@ -98,6 +98,27 @@ export default function App() {
   }, [])
   const inputs = useRef<(HTMLInputElement | null)[]>([])
   const startButton = useRef<HTMLButtonElement>(null)
+  const startingKey = useRef<string | null>(null)
+  useEffect(() => {
+    // A held start key belongs to the ready state, not to the first answer.
+    const release = (event: globalThis.KeyboardEvent) => {
+      if ((event.code || event.key) === startingKey.current) startingKey.current = null
+    }
+    const clear = () => { startingKey.current = null }
+    const consumeRepeat = (event: globalThis.KeyboardEvent) => {
+      if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.isComposing || event.keyCode === 229) return
+      if (event.repeat && (event.code || event.key) === startingKey.current
+        && inputs.current.some(input => input !== null && input === event.target)) event.preventDefault()
+    }
+    window.addEventListener('keydown', consumeRepeat, true)
+    window.addEventListener('keyup', release)
+    window.addEventListener('blur', clear)
+    return () => {
+      window.removeEventListener('keydown', consumeRepeat, true)
+      window.removeEventListener('keyup', release)
+      window.removeEventListener('blur', clear)
+    }
+  }, [])
   const finished = useRef(false)
   const running = startedAt !== null
   const settingsLocked = running || (grid !== null && result === null)
@@ -153,12 +174,16 @@ export default function App() {
   useEffect(() => {
     if (grid !== null || page !== 'practice') return
     function handleStartKey(event: globalThis.KeyboardEvent) {
-      if (event.key !== 'Enter' && event.key !== ' ') return
-      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing || event.defaultPrevented) return
-      if (event.target instanceof Element && event.target.closest('button, a[href], input, textarea, select, summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="combobox"], [tabindex]')) return
+      if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.isComposing || event.keyCode === 229 || event.defaultPrevented) return
+      const nativeStart = event.target === startButton.current
+      if (nativeStart && (event.key === 'Enter' || event.key === ' ')) return
+      if (event.shiftKey && (event.key === 'Enter' || event.key === ' ')) return
+      if (!(event.key.length === 1 || ['Enter', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.key))) return
+      if (!nativeStart && event.target instanceof Element && event.target.closest('button, a[href], input, textarea, select, summary, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="link"], [role="combobox"], [tabindex]')) return
       const popups = document.querySelectorAll('dialog[open], :popover-open, [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')
       if (Array.from(popups).some(popup => popup.getClientRects().length > 0 && getComputedStyle(popup).visibility !== 'hidden')) return
       event.preventDefault()
+      startingKey.current = event.code || event.key
       start()
     }
     window.addEventListener('keydown', handleStartKey)
@@ -318,7 +343,7 @@ export default function App() {
       </table>
       {grid === null && <div className="start-overlay">
         <Button ref={startButton} className="start-button" size="4" onClick={start} disabled={size === 0} aria-describedby="start-hint">Start</Button>
-        <p id="start-hint">Enter or Space to start</p>
+        <p id="start-hint">Any key to start</p>
       </div>}
       </div>
       <div className="grid-footer">

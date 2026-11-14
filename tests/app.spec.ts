@@ -6,7 +6,7 @@ test('keeps functional cues without explanatory filler', async ({ page }) => {
   await page.goto('/')
   const filler = /One grid\. A little faster each time\.|The grid is revealed when you start\.|The timer won’t pause\.|Your finished grid stays here for review\.|All completed rounds, newest first\.|Personal bests compare only matching order and size\.|All matching partial results, newest first\./
   await expect(page.locator('main')).not.toContainText(filler)
-  await expect(page.getByRole('button', { name: 'Start', exact: true })).toHaveAccessibleDescription('Enter or Space to start')
+  await expect(page.getByRole('button', { name: 'Start', exact: true })).toHaveAccessibleDescription('Any key to start')
   await expect(page.getByRole('alert')).toContainText('Saved scores could not be read.')
   await expect(page.getByText('Scores stay in this browser only.', { exact: true })).toHaveCount(0)
   await showStats(page)
