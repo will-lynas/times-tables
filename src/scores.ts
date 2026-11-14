@@ -1,3 +1,4 @@
+import { validCalculations, type CalculationDetails } from './calculations'
 import { parsePreserved } from './preservedJson'
 import type { Mode } from './game'
 import { canonicalFactors, factorKey, presetFactors } from './factors'
@@ -19,6 +20,7 @@ function isScore(value: unknown): value is Score {
     && typeof s.correct === 'number' && Number.isInteger(s.correct) && s.correct >= 0 && s.correct <= s.attempted
     && typeof s.elapsedMs === 'number' && Number.isFinite(s.elapsedMs) && s.elapsedMs >= 0
     && typeof s.completedAt === 'string' && Number.isFinite(Date.parse(s.completedAt))
+    && (!Object.hasOwn(s, 'calculations') || validCalculations(s.calculations, s as Score))
 }
 
 function readScores(raw: string | null) {
@@ -85,6 +87,7 @@ export type Score = {
   total: number
   elapsedMs: number
   completedAt: string
+  calculations?: CalculationDetails
 }
 
 // Optional only for source compatibility with legacy callers; loaded/new records carry factors.

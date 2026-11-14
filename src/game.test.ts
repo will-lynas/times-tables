@@ -15,7 +15,7 @@ test('grades only attempted answers and leaves blanks ungraded', () => {
   answers[1] = '0'
   expect(scoreAnswers(grid, answers)).toEqual({
     status: 'partial', correct: 1, attempted: 2, total: 144, accuracy: 50,
-    matches: [true, false, ...Array(142).fill(null)],
+    matches: [true, false, ...Array(142).fill(null)], calculations: expect.objectContaining({ version: 1 }),
   })
 })
 
@@ -30,7 +30,7 @@ test('refuses a partial answer list', () => {
 test('grades a smaller grid using its actual total and attempted denominator', () => {
   const grid = createGrid('ordered', Math.random, 2)
   expect(scoreAnswers(grid, ['0', '', '', ''])).toEqual({
-    status: 'partial', correct: 0, attempted: 1, total: 4, accuracy: 0, matches: [false, null, null, null],
+    status: 'partial', correct: 0, attempted: 1, total: 4, accuracy: 0, matches: [false, null, null, null], calculations: expect.objectContaining({ version: 1 }),
   })
   expect(scoreAnswers(grid, ['1', '2', '2', '4'])).toMatchObject({
     status: 'complete', correct: 4, attempted: 4, total: 4, accuracy: 100,
@@ -71,7 +71,7 @@ test.each(Array.from({ length: 11 }, (_, index) => index + 2))('creates and scor
   expect(grid.columns).toEqual(headers)
   expect(grid.products).toEqual(headers.flatMap(row => headers.map(column => row * column)))
   expect(scoreAnswers(grid, grid.products.map(String))).toEqual({
-    status: 'complete', attempted: size * size, correct: size * size, total: size * size, accuracy: 100, matches: Array(size * size).fill(true),
+    status: 'complete', attempted: size * size, correct: size * size, total: size * size, accuracy: 100, matches: Array(size * size).fill(true), calculations: expect.objectContaining({ version: 1 }),
   })
 })
 

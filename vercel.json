@@ -1,3 +1,3 @@
 {
-  "rewrites": [{ "source": "/stats", "destination": "/index.html" }, { "source": "/progress", "destination": "/index.html" }, { "source": "/about", "destination": "/index.html" }, { "source": "/settings", "destination": "/index.html" }]
+  "rewrites": [{ "source": "/stats/calculations", "destination": "/index.html" }, { "source": "/stats", "destination": "/index.html" }, { "source": "/progress", "destination": "/index.html" }, { "source": "/about", "destination": "/index.html" }, { "source": "/settings", "destination": "/index.html" }]
 }

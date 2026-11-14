@@ -1,3 +1,4 @@
+import type { CalculationDetails } from './calculations'
 import { canonicalFactors, presetFactors } from './factors'
 
 export type Mode = 'ordered' | 'shuffled'
@@ -11,7 +12,12 @@ export function scoreAnswers(grid: Grid, answers: string[]) {
   const correct = matches.filter(match => match === true).length
   const attempted = matches.filter(match => match !== null).length
   const status: 'complete' | 'partial' = attempted === matches.length ? 'complete' : 'partial'
-  return { status, correct, attempted, total: matches.length, accuracy: correct / attempted * 100, matches }
+  const calculations: CalculationDetails = { version: 1, cells: grid.products.map((product, index) => ({
+    index, rowIndex: Math.floor(index / grid.size), columnIndex: index % grid.size,
+    row: grid.rows[Math.floor(index / grid.size)], column: grid.columns[index % grid.size],
+    answer: answers[index], product, status: matches[index] === null ? 'unanswered' : matches[index] ? 'correct' : 'incorrect',
+  })) }
+  return { status, correct, attempted, total: matches.length, accuracy: correct / attempted * 100, matches, calculations }
 }
 
 export function createGrid(mode: Mode, random = Math.random, selection: number | readonly number[] = 12): Grid {

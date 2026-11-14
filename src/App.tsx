@@ -11,6 +11,7 @@ import { AttemptTime } from './AttemptTime'
 import { StatsSummary } from './StatsSummary'
 import { loadProgressSelection, saveProgressSelection } from './progressSettings'
 import type { ProgressSelection } from './progress'
+import { CalculationStats } from './CalculationStats'
 import { loadRunStarts, recordRunStart, RUN_META_KEY, RUN_START_PREFIX } from './statistics'
 import { loadTheme, saveTheme } from './theme'
 const ProgressChart = lazy(() => import('./ProgressChart'))
@@ -20,9 +21,10 @@ function formatTime(ms: number) {
   return `${Math.floor(tenths / 600)}:${String(Math.floor(tenths / 10) % 60).padStart(2, '0')}.${tenths % 10}`
 }
 
-type Page = 'practice' | 'stats' | 'about' | 'settings'
+type Page = 'practice' | 'stats' | 'calculations' | 'about' | 'settings'
 
 function pageFromPath(): Page {
+  if (window.location.pathname === '/stats/calculations') return 'calculations'
   if (window.location.pathname === '/settings') return 'settings'
   if (window.location.pathname === '/about') return 'about'
   return ['/stats', '/progress'].includes(window.location.pathname) ? 'stats' : 'practice'
@@ -39,7 +41,7 @@ export default function App() {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
     if (page === next) return
-    window.history.pushState(null, '', next === 'practice' ? '/' : `/${next}`)
+    window.history.pushState(null, '', next === 'practice' ? '/' : next === 'calculations' ? '/stats/calculations' : `/${next}`)
     setPage(next)
     window.scrollTo(0, 0)
   }
@@ -136,6 +138,10 @@ export default function App() {
   const visibleScores = history.scores.filter(score => score.mode === selection.mode
     && factorOption(scoreFactors(score)) === selectedKey)
     .sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt))
+  // Aggregate UI keeps its existing optimistic session results; error history
+  // includes only source records whose score transaction actually committed.
+  const recordedCalculations = page === 'calculations' ? loadScores() : null
+  const selectedScoreIds = new Set(visibleScores.map(score => score.id))
   const total = size * size
   const placeholders = Array.from({ length: size }, () => null)
 
@@ -209,7 +215,7 @@ export default function App() {
     const score: Score = {
       id: runId.current!, mode, status: completed.status, attempted: completed.attempted,
       size: grid.size, factors: canonicalFactors(grid.rows), correct: completed.correct, total: completed.total,
-      elapsedMs, completedAt: new Date().toISOString(),
+      elapsedMs, completedAt: new Date().toISOString(), calculations: completed.calculations,
     }
     const latest = loadScores()
     const persisted = latest.warning ? history.scores : latest.scores
@@ -275,7 +281,7 @@ export default function App() {
       <header className="page-header">
           <nav className="page-nav" aria-label="Main">
             <a href="/" aria-current={page === 'practice' ? 'page' : undefined} onClick={event => changePage(event, 'practice')}>Practice</a>
-            <a href="/stats" aria-current={page === 'stats' ? 'page' : undefined} onClick={event => changePage(event, 'stats')}>Stats</a>
+            <a href="/stats" aria-current={page === 'stats' || page === 'calculations' ? 'page' : undefined} onClick={event => changePage(event, 'stats')}>Stats</a>
             <a href="/about" aria-current={page === 'about' ? 'page' : undefined} onClick={event => changePage(event, 'about')}>About</a>
             <a href="/settings" aria-current={page === 'settings' ? 'page' : undefined} onClick={event => changePage(event, 'settings')}>Settings</a>
           </nav>
@@ -352,7 +358,7 @@ export default function App() {
       </div>
 
       </div>
-      {page === 'stats' && <div className="stats-page">
+      {(page === 'stats' || page === 'calculations') && <div className="stats-page">
       {history.warning && <p className="storage-warning" role="alert">{history.warning}</p>}
         <div className="toolbar stats-settings" role="group" aria-label="Stats settings">
           <SegmentedControl.Root aria-label="Stats order" data-value={selection.mode} value={selection.mode} disabled={settingsLocked} onValueChange={value => changeSharedSettings({ mode: value as Mode })}>
@@ -367,6 +373,11 @@ export default function App() {
         </div>
       {settings.warning && <p className="storage-warning" role="alert">{settings.warning}</p>}
       {selection.warning && <p className="storage-warning" role="alert">{selection.warning}</p>}
+      <nav className="page-nav stats-views" aria-label="Stats views">
+        <a href="/stats" aria-current={page === 'stats' ? 'page' : undefined} onClick={event => changePage(event, 'stats')}>Overview</a>
+        <a href="/stats/calculations" aria-current={page === 'calculations' ? 'page' : undefined} onClick={event => changePage(event, 'calculations')}>Calculations</a>
+      </nav>
+      {page === 'calculations' ? <CalculationStats scores={recordedCalculations!.scores.filter(score => selectedScoreIds.has(score.id))} unavailable={Boolean(history.warning || recordedCalculations!.warning)} /> : <>
       <StatsSummary scores={history.scores} tracking={tracking} mode={selection.mode} selection={selectedKey} unavailable={Boolean(history.warning)} />
       <Suspense fallback={<p role="status">Loading stats…</p>}><ProgressChart scores={history.scores} selection={selection} onSelectionChange={chooseStats} /></Suspense>
       <section className="scores" aria-labelledby="scores-heading">
@@ -376,6 +387,7 @@ export default function App() {
           <tbody>{visibleScores.map(score => <tr key={score.id} data-score-id={score.id} data-status={score.status} data-perfect={score.status === 'complete' && score.correct === score.total}><td><AttemptTime completedAt={score.completedAt} /></td><td>{score.status === 'partial' ? 'Partial' : 'Complete'}</td><td>{score.attempted} / {score.total}</td><td>{score.correct} / {score.attempted}</td><td>{Number((score.correct / score.attempted * 100).toFixed(1))}%</td><td>{formatTime(score.elapsedMs)}</td></tr>)}</tbody>
         </table>}
       </section>
+      </>}
       </div>}
       {page === 'settings' && <section className="settings-page" aria-labelledby="settings-heading">
         <h2 id="settings-heading">Settings</h2>
