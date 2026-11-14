@@ -24,7 +24,7 @@ async function geometry(graph: Locator) {
     const svg = element.querySelector('svg.recharts-surface[role="application"]')!.getBoundingClientRect()
     const points = (selector: string) => [...element.querySelectorAll(selector)].map(e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2 - svg.x, y: r.y + r.height / 2 - svg.y } })
     const vertices = (selector: string) => [...(element.querySelector(selector)?.getAttribute('d') ?? '').matchAll(/[ML]([\d.e+-]+),([\d.e+-]+)/g)].map(m => ({ x: +m[1], y: +m[2] }))
-    return { perfect: points('.progress-perfect .recharts-scatter-symbol'), other: points('.progress-other .recharts-scatter-symbol'), ten: vertices('.progress-average-10 .recharts-line-curve'), hundred: vertices('.progress-average-100 .recharts-line-curve'), best: vertices('.progress-best .recharts-line-curve'), ticks: [...element.querySelectorAll('.recharts-xAxis-tick-labels text')].map(t => t.textContent) }
+    return { perfect: points('.progress-perfect .recharts-scatter-symbol'), other: points('.progress-other .recharts-scatter-symbol'), ten: vertices('.progress-average-5 .recharts-line-curve'), hundred: vertices('.progress-average-25 .recharts-line-curve'), best: vertices('.progress-best .recharts-line-curve'), ticks: [...element.querySelectorAll('.recharts-xAxis-tick-labels text')].map(t => t.textContent) }
   })
 }
 for (const appearance of ['dark', 'light']) test(`Time / Runs shares raw, mean, record and hover projection in ${appearance}`, async ({ page }, info) => {
@@ -119,7 +119,7 @@ for (const appearance of ['dark', 'light']) {
       await graph.locator('.progress-perfect .recharts-scatter-symbol').hover()
       await expect(graph.locator('.progress-tooltip-duration')).toHaveText(duration)
       await expect(graph.locator('.progress-tooltip dd').first()).toHaveText('1')
-      for (const selector of ['.progress-average-10-dot', '.progress-average-100-dot', '.progress-best-dot']) await expect(graph.locator(selector)).toBeVisible()
+      for (const selector of ['.progress-average-5-dot', '.progress-average-25-dot', '.progress-best-dot']) await expect(graph.locator(selector)).toBeVisible()
     }
     await page.reload()
     await expect(graph.getByRole('button', { name: 'Runs', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -182,7 +182,7 @@ test('101 eligible runs interleaved with partials retain independent rolling-win
   const eligible = scores.map((s, i) => ({ s, i })).filter(({ s }) => s.status === 'complete')
   const gap = (g.perfect.at(-1)!.x - g.perfect[0].x) / (eligible.at(-1)!.i - eligible[0].i)
   const slope = (g.perfect[1].y - g.perfect[0].y) / ((eligible[1].s.elapsedMs - eligible[0].s.elapsedMs) / 1000)
-  for (const [window, vertices] of [[10, g.ten], [100, g.hundred]] as const) {
+  for (const [window, vertices] of [[5, g.ten], [25, g.hundred]] as const) {
     expect(vertices).toHaveLength(101)
     vertices.forEach((p, i) => {
       const values = eligible.slice(Math.max(0, i + 1 - window), i + 1).map(({ s }) => s.elapsedMs / 1000)

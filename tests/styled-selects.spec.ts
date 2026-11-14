@@ -84,7 +84,7 @@ test('keyboard selection and Tab dismissal preserve independent persisted values
     await expect(panel).toHaveCount(0)
     if (name === 'Score size') await expect(page.getByRole('region', { name: 'Run statistics', exact: true }).locator('dd').first()).toBeFocused()
     else if (index < names.length - 1) await expect(page.getByRole('combobox', { name: names[index + 1], exact: true })).toBeFocused()
-    else await expect(page.getByRole('link', { name: 'Practice', exact: true })).toBeFocused()
+    else await expect(page.getByRole('button', { name: 'Average of 5', exact: true })).toBeFocused()
     await trigger.press('Enter')
     await expect(panel).toBeVisible()
     await page.keyboard.press('Shift+Tab')

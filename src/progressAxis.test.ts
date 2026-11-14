@@ -12,7 +12,7 @@ test('Runs projects every selected observation in stable chronological order wit
   const runs = buildProgress(scores, { ...selection, axisMode: 'runs' }).points
   expect(runs.map(p => [p.id, p.runNumber, p.x])).toEqual([['partial', 1, 1], ['first', 2, 2], ['duplicate', 3, 3], ['wrong', 4, 4], ['late', 5, 5]])
   expect(time.map(p => p.x)).toEqual(time.map(p => p.timestamp))
-  expect(runs.filter(p => p.perfect).map(p => [p.x, p.averageSeconds, p.average100Seconds])).toEqual([[2, 60, 60], [3, 50, 50], [5, 100 / 3, 100 / 3]])
+  expect(runs.filter(p => p.perfect).map(p => [p.x, p.average5Seconds, p.average25Seconds])).toEqual([[2, 60, 60], [3, 50, 50], [5, 100 / 3, 100 / 3]])
   expect(runs.map(p => p.bestSeconds)).toEqual([null, 60, 40, 40, 0])
   expect(runs.map(({ x: _, ...p }) => p)).toEqual(time.map(({ x: _, ...p }) => p))
   expect(JSON.stringify(scores)).toBe(before)

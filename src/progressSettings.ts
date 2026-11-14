@@ -4,6 +4,7 @@ import { browserStorage, readPreferences, STORAGE_WARNING, preferenceWriter, pre
 import { durableWrite, recoverWrites } from './writeJournal'
 
 const KEY = 'times-tables.progress'
+const visibilityKeys = ['showAverage5', 'showAverage25', 'showRecord'] as const
 
 export function loadProgressSelection(fallback: ProgressSelection): ProgressSelection {
   try {
@@ -11,7 +12,10 @@ export function loadProgressSelection(fallback: ProgressSelection): ProgressSele
     if (raw === null) return fallback
     if (!validSelection(data)) return { ...fallback, warning: STORAGE_WARNING }
     const { mode, size, factors } = data
-    const axis = data.axisMode === undefined ? {} : { axisMode: data.axisMode as ProgressSelection['axisMode'] }
+    const axis = {
+      ...(data.axisMode === undefined ? {} : { axisMode: data.axisMode as ProgressSelection['axisMode'] }),
+      ...Object.fromEntries(visibilityKeys.filter(key => data[key] !== undefined).map(key => [key, data[key]])),
+    }
     if (factors !== undefined) {
       try {
         const values = canonicalFactors(factors)
@@ -31,6 +35,7 @@ export function loadProgressSelection(fallback: ProgressSelection): ProgressSele
 function validSelection(data: Record<string, unknown>): boolean {
   try {
     if (Object.keys(data).length === 0) return true
+    if (visibilityKeys.some(key => data[key] !== undefined && typeof data[key] !== 'boolean')) return false
     if (data.axisMode !== undefined && data.axisMode !== 'time' && data.axisMode !== 'runs') return false
     if (data.mode !== 'ordered' && data.mode !== 'shuffled') return false
     if (data.factors !== undefined) return canonicalFactors(data.factors).length === data.size

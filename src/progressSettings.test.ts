@@ -11,6 +11,30 @@ function storage(raw: string | null) {
   return values
 }
 
+test.each(['showAverage5', 'showAverage25', 'showRecord'] as const)('visibility flag %s explicitly restores false and replays without sibling loss', async flag => {
+  const raw = ' { "mode": "ordered", "size": 3, "showAverage10": false, "showAverage100": false, "future": {"kept":[1,2]} } '
+  const values = storage(raw)
+  await expect(saveProgressSelection({ [flag]: false }, fallback)).resolves.toBeNull()
+  expect(loadProgressSelection(fallback)).toMatchObject({ [flag]: false })
+  expect(JSON.parse(values.get('times-tables.progress')!)).toEqual({ ...JSON.parse(raw), version: 1, [flag]: false })
+  expect(JSON.parse(values.get('times-tables.progress.backup.vunversioned')!)).toEqual([raw])
+  const [intent, bytes] = [...values].find(([k]) => k.includes('.intent.'))!
+  expect(JSON.parse(bytes).payload.change).toEqual({ [flag]: false })
+  values.delete(intent.replace('.intent.', '.receipt.'))
+  values.set('times-tables.progress', raw)
+  await expect(recoverProgressSelection()).resolves.toBeNull()
+  expect(loadProgressSelection(fallback)).toMatchObject({ [flag]: false })
+  expect(values.get(intent)).toBe(bytes)
+})
+
+test.each(['showAverage5', 'showAverage25', 'showRecord'] as const)('future visibility format %s is read-only', async flag => {
+  const raw = JSON.stringify({ version: 1, ...fallback, [flag]: 'future', richer: { keep: true } })
+  const values = storage(raw)
+  expect(loadProgressSelection(fallback).warning).toEqual(expect.any(String))
+  await expect(saveProgressSelection({ [flag]: false }, fallback)).resolves.toEqual(expect.any(String))
+  expect([...values]).toEqual([['times-tables.progress', raw]])
+})
+
 test('defaults to current game once, then saves a separate exact graph selection', async () => {
   const values = storage(null)
   expect(loadProgressSelection(fallback)).toMatchObject(fallback)

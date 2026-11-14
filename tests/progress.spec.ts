@@ -31,7 +31,7 @@ for (const appearance of ['dark', 'light'] as const) {
       await graph.locator('.progress-perfect .recharts-scatter-symbol').nth(i).hover()
       await expect(graph.locator('.progress-tooltip-duration')).toHaveText(duration)
       await expect(graph.locator('.progress-tooltip-status')).toHaveText('Complete')
-      await expect(graph.locator('.progress-tooltip dt')).toHaveText(['Accuracy', 'Answered', 'Average of 10', 'Average of 100', 'Best time'])
+      await expect(graph.locator('.progress-tooltip dt')).toHaveText(['Accuracy', 'Answered', 'Average of 5', 'Average of 25', 'Best time'])
       await expect(graph.locator('.progress-tooltip dd')).toHaveText(['100%', '4 / 4', ['1m', '50s', '1m'][i], ['1m', '50s', '1m'][i], ['1m', '40s', '40s'][i]])
       const hierarchy = await graph.locator('.progress-tooltip').evaluate(element => ({
         durationSize: parseFloat(getComputedStyle(element.querySelector('.progress-tooltip-duration')!).fontSize),
@@ -63,7 +63,7 @@ test('plots exact settings, truthful time spacing and perfect-only averages with
   await expect(graph.locator('.progress-perfect .recharts-scatter-symbol')).toHaveCount(3)
   await expect(graph.locator('.progress-other .recharts-scatter-symbol')).toHaveCount(2)
   await expect(graph.locator('.recharts-line-curve')).toHaveCount(3)
-  const line = await graph.locator('.progress-average-10 .recharts-line-curve').getAttribute('d')
+  const line = await graph.locator('.progress-average-5 .recharts-line-curve').getAttribute('d')
   const lineCoordinates = [...line!.matchAll(/[ML]([\d.-]+),([\d.-]+)/g)].map(match => ({ x: Number(match[1]), y: Number(match[2]) }))
   expect(lineCoordinates).toHaveLength(3)
   expect(lineCoordinates[0].y).toBeCloseTo(lineCoordinates[2].y, 2)

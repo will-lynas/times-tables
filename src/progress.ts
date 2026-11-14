@@ -2,7 +2,7 @@ import type { Mode } from './game'
 import { scoreFactors, type Score } from './scores'
 import { factorKey, presetFactors } from './factors'
 
-export type ProgressSelection = { mode: Mode; size: number; factors?: number[]; axisMode?: 'time' | 'runs'; warning?: string }
+export type ProgressSelection = { mode: Mode; size: number; factors?: number[]; axisMode?: 'time' | 'runs'; showAverage5?: boolean; showAverage25?: boolean; showRecord?: boolean; warning?: string }
 export type ProgressPoint = Score & {
   runNumber: number
   x: number
@@ -10,10 +10,10 @@ export type ProgressPoint = Score & {
   seconds: number
   perfect: boolean
   accuracy: number
-  averageSeconds: number | null
-  averageCount: number
-  average100Seconds: number | null
-  average100Count: number
+  average5Seconds: number | null
+  average5Count: number
+  average25Seconds: number | null
+  average25Count: number
   bestSeconds: number | null
   isRecord: boolean
 }
@@ -36,16 +36,16 @@ export function buildProgress(scores: readonly Score[], selection: ProgressSelec
     if (perfect) {
       perfectCount++
       window.push(score.elapsedMs / 1000)
-      if (window.length > 100) window.shift()
+      if (window.length > 25) window.shift()
     }
-    const recent10 = window.slice(-10)
-    const averageSeconds = perfect ? recent10.reduce((sum, seconds) => sum + seconds, 0) / recent10.length : null
-    const average100Seconds = perfect ? window.reduce((sum, seconds) => sum + seconds, 0) / window.length : null
+    const recent5 = window.slice(-5)
+    const average5Seconds = perfect ? recent5.reduce((sum, seconds) => sum + seconds, 0) / recent5.length : null
+    const average25Seconds = perfect ? window.reduce((sum, seconds) => sum + seconds, 0) / window.length : null
     return { ...score, runNumber: index + 1, x: selection.axisMode === 'runs' ? index + 1 : Date.parse(score.completedAt),
       timestamp: Date.parse(score.completedAt), seconds: score.elapsedMs / 1000,
       perfect, accuracy: score.attempted === 0 ? 0 : score.correct / score.attempted * 100,
-      averageSeconds, averageCount: perfect ? recent10.length : 0,
-      average100Seconds, average100Count: perfect ? window.length : 0, bestSeconds, isRecord }
+      average5Seconds, average5Count: perfect ? recent5.length : 0,
+      average25Seconds, average25Count: perfect ? window.length : 0, bestSeconds, isRecord }
   })
   return { points, perfectCount }
 }

@@ -14,7 +14,7 @@ test('plots chronological exact-setting observations without mutating the source
   source.forEach(Object.freeze)
   Object.freeze(source)
   const result = buildProgress(source, { mode: 'ordered', size: 2 })
-  expect(result.points.map(point => [point.id, point.timestamp, point.seconds, point.averageSeconds, point.averageCount])).toEqual([
+  expect(result.points.map(point => [point.id, point.timestamp, point.seconds, point.average5Seconds, point.average5Count])).toEqual([
     ['early', Date.UTC(2026, 0, 1), 60, 60, 1], ['late', Date.UTC(2026, 0, 3), 30, 45, 2],
   ])
   expect(result.perfectCount).toBe(2)
@@ -25,13 +25,13 @@ test('only perfect complete rounds contribute to the trailing up-to-10 average',
   const source = [round('first', 60, 1), round('partial-perfect', 1, 2, { status: 'partial', attempted: 2, correct: 2 }),
     round('wrong', 2, 3, { correct: 3 }), round('second', 40, 4)]
   const result = buildProgress(source, { mode: 'ordered', size: 2 })
-  expect(result.points.map(point => [point.perfect, point.accuracy, point.averageSeconds, point.averageCount])).toEqual([
+  expect(result.points.map(point => [point.perfect, point.accuracy, point.average5Seconds, point.average5Count])).toEqual([
     [true, 100, 60, 1], [false, 100, null, 0], [false, 75, null, 0], [true, 100, 50, 2],
   ])
   expect(result.perfectCount).toBe(2)
   const many = buildProgress(Array.from({ length: 12 }, (_, index) => round(String(index), (index + 1) * 10, index + 1)), { mode: 'ordered', size: 2 })
-  expect(many.points.map(point => point.averageSeconds)).toEqual([10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 65, 75])
-  expect(many.points.map(point => point.averageCount)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10])
+  expect(many.points.map(point => point.average5Seconds)).toEqual([10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100])
+  expect(many.points.map(point => point.average5Count)).toEqual([1, 2, 3, 4, 5, 5, 5, 5, 5, 5, 5, 5])
 })
 
 test('handles empty, single, identical timestamps, zero duration and outliers without fabricated observations', () => {
@@ -39,10 +39,10 @@ test('handles empty, single, identical timestamps, zero duration and outliers wi
   expect(buildProgress([], selection)).toEqual({ points: [], perfectCount: 0 })
   expect(progressTimeDomain([])).toEqual([0, 1])
   const one = buildProgress([round('one', 0, 1)], selection)
-  expect(one.points[0]).toMatchObject({ seconds: 0, averageSeconds: 0, averageCount: 1 })
+  expect(one.points[0]).toMatchObject({ seconds: 0, average5Seconds: 0, average5Count: 1 })
   expect(progressTimeDomain(one.points)).toEqual([Date.UTC(2026, 0, 1) - 60000, Date.UTC(2026, 0, 1) + 60000])
   const equal = buildProgress([round('b', 100000, 1), round('a', 0, 1), round('later', 10, 4)], selection)
-  expect(equal.points.map(point => [point.id, point.seconds, point.averageSeconds])).toEqual([
+  expect(equal.points.map(point => [point.id, point.seconds, point.average5Seconds])).toEqual([
     ['b', 100000, 100000], ['a', 0, 50000], ['later', 10, 100010 / 3],
   ])
   expect(progressTimeDomain(equal.points)).toEqual([Date.UTC(2026, 0, 1), Date.UTC(2026, 0, 4)])

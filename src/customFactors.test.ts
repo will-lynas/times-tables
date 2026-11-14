@@ -73,7 +73,7 @@ test('isolates rankings and chronological graph/averages by canonical set, never
     { ...round('partial', a), status: 'partial' as const, correct: 1, attempted: 1 }]
   expect(rankScores(scores, 'ordered', a).map(s => s.id)).toEqual(['a', 'equivalent'])
   const progress = buildProgress(scores, { mode: 'ordered', size: 5, factors: a })
-  expect(progress.points.map(p => [p.id, p.averageSeconds])).toEqual([['a', 4], ['equivalent', 5], ['partial', null]])
+  expect(progress.points.map(p => [p.id, p.average5Seconds])).toEqual([['a', 4], ['equivalent', 5], ['partial', null]])
   expect(rankScores([round('standard', [1, 2])], 'ordered', 2)).toHaveLength(1)
 })
 

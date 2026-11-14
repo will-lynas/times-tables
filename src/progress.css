@@ -10,7 +10,15 @@
 .progress-controls select:hover { color: var(--gray-12); background: var(--gray-3); }
 .progress-controls option { color: var(--gray-12); background: var(--gray-2); }
 .progress-empty { padding: 24px 0; }
-.progress-plot { height: 280px; margin-top: 24px; }
+.progress-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+.progress-legend button { display: inline-flex; align-items: center; gap: 7px; padding: 4px 7px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--gray-12); font: inherit; font-size: 12px; cursor: pointer; }
+.progress-legend button:hover { background: var(--gray-3); }
+.progress-legend button[aria-pressed="false"] { border-color: var(--gray-7); border-style: dashed; }
+.progress-legend button[aria-pressed="false"] > span:first-of-type { text-decoration: line-through; }
+.progress-legend button:focus-visible { outline: 2px solid var(--accent-11); outline-offset: 2px; }
+.progress-legend svg { flex: none; }
+.progress-legend-state { width: 10px; text-align: center; }
+.progress-plot { height: 280px; margin-top: 8px; }
 .progress .recharts-scatter-symbol { cursor: crosshair; }
 .progress .recharts-line, .progress .recharts-line-dots { pointer-events: none; }
 .progress-tooltip { display: flex; flex-direction: column; gap: 12px; min-width: 210px; padding: 14px 16px; border: 1px solid var(--gray-7); border-radius: 6px; background: var(--color-panel-solid); color: var(--gray-12); font-size: 13px; line-height: 1.5; box-shadow: 0 2px 8px var(--black-a3); }

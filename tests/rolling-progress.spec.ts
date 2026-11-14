@@ -28,8 +28,8 @@ for (const appearance of ['dark', 'light']) {
     page.on('console', message => { if (['warning', 'error'].includes(message.type())) errors.push(message.text()) })
     const graph = await seed(page, fixture, appearance)
     await expect(graph.locator('.progress-results')).toHaveCount(0)
-    await expect(graph.locator('.progress-average-10 .recharts-line-curve')).toHaveCount(1)
-    await expect(graph.locator('.progress-average-100 .recharts-line-curve')).toHaveCount(1)
+    await expect(graph.locator('.progress-average-5 .recharts-line-curve')).toHaveCount(1)
+    await expect(graph.locator('.progress-average-25 .recharts-line-curve')).toHaveCount(1)
     await expect(graph.locator('.progress-best .recharts-line-curve')).toHaveCount(1)
     const geometry = await graph.evaluate(element => {
       const svg = element.querySelector('svg.recharts-surface[role="application"]')!.getBoundingClientRect()
@@ -44,7 +44,7 @@ for (const appearance of ['dark', 'light']) {
       }
       const ticks = [...element.querySelectorAll('.recharts-yAxis-tick-labels text')].map(t => ({ text: t.textContent!, y: +t.getAttribute('y')!, color: getComputedStyle(t).fill }))
       return { perfect: centers('.progress-perfect .recharts-scatter-symbol'), other: centers('.progress-other .recharts-scatter-symbol'),
-        ten: series('.progress-average-10'), hundred: series('.progress-average-100'), best: series('.progress-best'), ticks,
+        ten: series('.progress-average-5'), hundred: series('.progress-average-25'), best: series('.progress-best'), ticks,
         grid: [...element.querySelectorAll('.recharts-cartesian-grid-horizontal line')].map(l => ({ y: +l.getAttribute('y1')!, y2: +l.getAttribute('y2')!, opacity: +getComputedStyle(l).strokeOpacity })),
         vertical: element.querySelectorAll('.recharts-cartesian-grid-vertical line').length,
         axes: element.querySelectorAll('.recharts-yAxis').length }
@@ -79,12 +79,12 @@ for (const appearance of ['dark', 'light']) {
     expect(geometry.ticks[0].color).not.toBe(ten.stroke)
     expect(geometry.grid.length).toBe(geometry.ticks.length)
     geometry.grid.forEach(line => { expect(line.y).toBe(line.y2); expect(line.opacity).toBeLessThanOrEqual(0.15); expect(geometry.ticks.some(t => Math.abs(t.y - line.y) < 1)).toBe(true) })
-    await expect(graph.getByRole('img')).toHaveAccessibleDescription(/10 and 100 perfect complete rounds.*fewer.*warm-up.*best.*strictly faster/i)
+    await expect(graph.getByRole('img')).toHaveAccessibleDescription(/5 and 25 perfect complete rounds.*fewer.*warm-up.*best.*strictly faster/i)
     await expect(graph.getByRole('table', { name: 'Progress data' }).getByRole('columnheader')).toHaveText(['Date', 'Status', 'Attempted', 'Accuracy', 'Duration'])
     for (const [index, duration] of [[0, '1m'], [3, '1m 20s'], [4, '0s']] as const) {
       await graph.locator('.progress-perfect .recharts-scatter-symbol').nth(index).hover()
       await expect(graph.locator('.progress-tooltip-duration')).toHaveText(duration)
-      await expect(graph.locator('.progress-tooltip dt')).toHaveText(['Accuracy', 'Answered', 'Average of 10', 'Average of 100', 'Best time'])
+      await expect(graph.locator('.progress-tooltip dt')).toHaveText(['Accuracy', 'Answered', 'Average of 5', 'Average of 25', 'Best time'])
       await expect(graph.locator('.progress-tooltip time')).toHaveAttribute('datetime', fixture.filter(s => s.status === 'complete' && s.correct === s.total)[index].completedAt)
     }
     await graph.locator('.progress-other .recharts-scatter-symbol').first().hover()
@@ -109,10 +109,10 @@ test(`101-run rendered averages match independent trailing windows, with real ga
     const svg = element.querySelector('svg.recharts-surface[role="application"]')!.getBoundingClientRect()
     const points = [...element.querySelectorAll('.progress-perfect .recharts-scatter-symbol')].map(e => { const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2 - svg.x, y: r.y + r.height / 2 - svg.y } })
     const vertices = (selector: string) => [...element.querySelector(selector)!.getAttribute('d')!.matchAll(/[ML]([\d.e+-]+),([\d.e+-]+)/g)].map(m => ({ x: +m[1], y: +m[2] }))
-    return { points, ten: vertices('.progress-average-10 .recharts-line-curve'), hundred: vertices('.progress-average-100 .recharts-line-curve') }
+    return { points, ten: vertices('.progress-average-5 .recharts-line-curve'), hundred: vertices('.progress-average-25 .recharts-line-curve') }
   })
   const slope = (geometry.points[1].y - geometry.points[0].y) / ((scores[1].elapsedMs - scores[0].elapsedMs) / 1000)
-  for (const [window, vertices] of [[10, geometry.ten], [100, geometry.hundred]] as const) {
+  for (const [window, vertices] of [[5, geometry.ten], [25, geometry.hundred]] as const) {
     expect(vertices).toHaveLength(101)
     vertices.forEach((p, i) => {
       const values = scores.slice(Math.max(0, i + 1 - window), i + 1).map(s => s.elapsedMs / 1000)
@@ -128,7 +128,7 @@ test(`101-run rendered averages match independent trailing windows, with real ga
 
 test(`single zero record and averages remain visible without blocking its raw hover in ${appearance}`, async ({ page }) => {
   const graph = await seed(page, [run(0, 0)], appearance)
-  for (const selector of ['.progress-average-10-dot', '.progress-average-100-dot', '.progress-best-dot']) {
+  for (const selector of ['.progress-average-5-dot', '.progress-average-25-dot', '.progress-best-dot']) {
     await expect(graph.locator(selector)).toHaveCount(1)
     await expect(graph.locator(selector)).toBeVisible()
   }
