@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { chooseGridSize, showStats } from './helpers'
+import { chooseGridSize, chooseFilter, showStats } from './helpers'
 
 test('graph selection survives reload before its delayed preference commit', async ({ page, context }) => {
   await page.goto('/')
@@ -16,12 +16,11 @@ test('graph selection survives reload before its delayed preference commit', asy
     await ready
   })
   const order = page.getByRole('combobox', { name: 'Progress order', exact: true })
-  if (await order.count()) await order.selectOption('ordered')
-  else { await page.getByRole('button', { name: 'Progress order', exact: true }).click(); await page.getByRole('option', { name: 'Ordered', exact: true }).click() }
+  await chooseFilter(order, 'ordered')
   await page.reload({ waitUntil: 'commit' })
   await holder.evaluate(() => (window as unknown as { releaseStorageLock: () => void }).releaseStorageLock())
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.progress') ?? '{}').mode)).toBe('ordered')
-  await expect(page.getByRole('button', { name: 'Progress order', exact: true }).or(order)).toContainText('Ordered')
+  await expect(order).toHaveAttribute('data-value', 'ordered')
   await holder.close()
 })
 

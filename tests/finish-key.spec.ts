@@ -103,33 +103,32 @@ test('leaves buttons, links, settings and history filters to their native Enter 
 test('synchronous duplicate Shift+Enter and Finish events persist exactly once', async ({ page }) => {
   await startSmall(page)
   await page.getByRole('textbox').first().fill('1')
-  const writes = await page.evaluate(key => {
+  await page.evaluate(key => {
     const original = Storage.prototype.setItem
     const writes: string[] = []
     Storage.prototype.setItem = function (name, value) {
       if (name === key) writes.push(value)
       original.call(this, name, value)
     }
-    try {
-      const cell = document.querySelector('td input')!
-      const finish = Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Finish early')!
-      for (let index = 0; index < 2; index++) {
-        cell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }))
-      }
-      finish.click()
-      return writes
-    } finally {
-      Storage.prototype.setItem = original
+    Object.assign(window, { readScoreWrites: () => { Storage.prototype.setItem = original; return writes } })
+    const cell = document.querySelector('td input')!
+    const finish = Array.from(document.querySelectorAll('button')).find(button => button.textContent === 'Finish early')!
+    for (let index = 0; index < 2; index++) {
+      cell.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true, cancelable: true }))
     }
+    finish.click()
   }, SCORE_KEY)
+  // Keep the probe installed through actual asynchronous commit, not just dispatch.
+  await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
+  const writes = await page.evaluate(() => (window as unknown as { readScoreWrites: () => string[] }).readScoreWrites())
   expect(writes).toHaveLength(1)
   expect(JSON.parse(writes[0]).scores).toHaveLength(1)
-  await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
   expect(await savedScores(page)).toEqual(JSON.parse(writes[0]).scores)
   await page.getByRole('button', { name: 'New round', exact: true }).click()
   await page.keyboard.press('Enter')
   await page.getByRole('textbox').first().fill('2')
   await page.keyboard.press('Shift+Enter')
+  await expect(page.getByRole('heading', { name: 'Partial result', exact: true })).toBeVisible()
   expect(await savedScores(page)).toHaveLength(2)
 })
 
@@ -171,6 +170,7 @@ test('Shift+Enter completion keeps history filters independent and persists roun
   const cells = page.getByRole('textbox')
   for (const [index, value] of ['1', '2', '2', '4'].entries()) await cells.nth(index).fill(value)
   await cells.last().press('Shift+Enter')
+  await expect(page.getByRole('heading', { name: 'Round complete', exact: true })).toBeVisible()
   const original = await savedScores(page)
   await page.getByRole('button', { name: 'New round', exact: true }).click()
   await page.getByRole('radio', { name: 'Shuffled', exact: true }).click()

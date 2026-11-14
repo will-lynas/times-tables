@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { chooseGridSize, showStats } from './helpers'
+import { chooseGridSize, chooseFilter, showStats } from './helpers'
 
 const score = { id: 'fixture', mode: 'ordered', size: 2, factors: [7, 13], status: 'partial', attempted: 2, correct: 1, total: 4, elapsedMs: 123.45, completedAt: '2026-01-01T00:00:00Z', extra: { raw: ['001', null] } }
 
@@ -25,7 +25,7 @@ for (const version of [1, 2, 3, 4]) test(`production round flow migrates v${vers
   await page.getByRole('button', { name: 'Start', exact: true }).click()
   await page.getByRole('textbox').first().fill('0')
   await page.getByRole('button', { name: 'Finish early' }).click()
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!).scores.length)).toBe(2)
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores') ?? '{"scores":[]}').scores.length)).toBe(2)
   const data = await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!))
   expect(data.extra).toEqual({ nested: [true, null] })
   expect(data.scores[0]).toMatchObject(JSON.parse(raw).scores[0])
@@ -45,9 +45,19 @@ test('two stale tabs finishing together retain both rounds and independent prefe
     await tab.getByRole('textbox').first().fill('0')
   }))
   await Promise.all([page, other].map(tab => tab.getByRole('button', { name: 'Finish early' }).click()))
-  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!).scores.length)).toBe(2)
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores') ?? '{"scores":[]}').scores.length)).toBe(2)
   const ids = await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!).scores.map((s: { id: string }) => s.id))
   expect(new Set(ids).size).toBe(2)
+  await Promise.all([showStats(page), showStats(other)])
+  await Promise.all([
+    chooseFilter(page.getByRole('combobox', { name: 'Score order', exact: true }), 'ordered'),
+    chooseFilter(other.getByRole('combobox', { name: 'Score size', exact: true }), '2'),
+  ])
+  await page.reload()
+  await expect(page.getByRole('combobox', { name: 'Score order', exact: true })).toHaveAttribute('data-value', 'ordered')
+  await expect(page.getByRole('combobox', { name: 'Score size', exact: true })).toHaveAttribute('data-value', '2')
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.settings')!))).toMatchObject({ scoreMode: 'ordered', scoreFactors: '2' })
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('times-tables.scores')!).scores.map((s: { id: string }) => s.id))).toEqual(ids)
   await other.close()
 })
 

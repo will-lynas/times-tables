@@ -16,6 +16,7 @@ function entries(storage: JournalStorage, target: string) {
   const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index))
     .filter((key): key is string => key !== null && key.startsWith(prefix)).sort()
   return keys.map(key => {
+    if (!/^\d{16}-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(key.slice(prefix.length))) throw new Error('Unsupported intent identity')
     const raw = storage.getItem(key)
     if (raw === null) throw new Error('Intent disappeared')
     const value: unknown = parsePreserved(raw)
@@ -70,7 +71,7 @@ export function durableWrite(target: string, payload: unknown, apply: Apply, get
     if (!Number.isSafeInteger(sequence)) throw new Error('Invalid intent sequence')
     const id = `${String(sequence).padStart(16, '0')}-${crypto.randomUUID()}`
     const key = `${target}.intent.${id}`
-    if (storage.getItem(key) !== null) throw new Error('Intent identity collision')
+    if (storage.getItem(key) !== null || storage.getItem(`${target}.receipt.${id}`) !== null) throw new Error('Intent identity collision')
     const raw = JSON.stringify({ version: 1, payload })
     storage.setItem(key, raw)
     if (storage.getItem(key) !== raw) throw new Error('Intent could not be verified')

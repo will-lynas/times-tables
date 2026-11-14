@@ -13,6 +13,13 @@ function memory(raw: string | null, key = SCORE_KEY) {
 }
 afterEach(() => vi.unstubAllGlobals())
 
+test('an explicit unset preference survives journal serialization and does not resurrect after reload', async () => {
+  const { values } = memory('{"version":1,"scoreFactors":"2","scoreSize":"all","extra":{"keep":true}}', 'times-tables.settings')
+  expect(await saveSettings({ scoreFactors: undefined, scoreSize: 'all' })).toBeNull()
+  expect(JSON.parse(values.get('times-tables.settings')!)).toEqual({ version: 1, scoreSize: 'all', extra: { keep: true } })
+  expect(loadSettings().scoreFactors).toBeUndefined()
+})
+
 test.each(['times-tables.settings', 'times-tables.progress'])('patch %s keeps richer fields and backs up legacy bytes', async key => {
   const raw = ` ${JSON.stringify({ mode: 'ordered', size: 2, future: { nested: ['001', null] } })}\n`
   const { values } = memory(raw, key)

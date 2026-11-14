@@ -168,7 +168,7 @@ export default function App() {
     setStartedAt(null)
     setElapsed(elapsedMs)
     setHistory({ scores, warning: history.warning })
-    void saveScores(scores).then(warning => {
+    void saveScores([score]).then(warning => {
       setResult(completed)
       setHistory(current => {
         if (warning) return { ...current, warning }

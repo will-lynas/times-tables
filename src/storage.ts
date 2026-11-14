@@ -43,13 +43,20 @@ export function readPreferences(storage: StoragePort, key: string) {
   return { raw, data }
 }
 
+export function preferencePayload(change: Record<string, unknown>, defaults: Record<string, unknown> = {}) {
+  return { change: Object.fromEntries(Object.entries(change).filter(([, value]) => value !== undefined)),
+    unset: Object.keys(change).filter(key => change[key] === undefined), defaults }
+}
 export function preferenceWriter(key: string, validate: (data: Record<string, unknown>) => boolean) {
   return (storage: StoragePort, payload: unknown) => {
     if (!object(payload) || !object(payload.change) || !object(payload.defaults)) throw new Error('Invalid preference intent')
     const { raw, data } = readPreferences(storage, key)
     if (!validate(data)) throw new Error('Invalid original preferences')
     const { warning: _warning, ...patch } = payload.change
-    const next = { ...(raw === null ? payload.defaults : data), ...patch, version: 1 }
+    const next: Record<string, unknown> = { ...(raw === null ? payload.defaults : data), ...patch, version: 1 }
+    const unset = payload.unset ?? []
+    if (!Array.isArray(unset) || !unset.every(key => typeof key === 'string' && key !== 'version')) throw new Error('Invalid unset fields')
+    for (const key of unset) delete next[key]
     if (!validate(next)) throw new Error('Invalid preferences')
     if (raw !== null && !('version' in data)) backup(storage, key, 'unversioned', raw)
     storage.setItem(key, JSON.stringify(next))

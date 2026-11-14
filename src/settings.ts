@@ -1,6 +1,6 @@
 import type { Mode } from './game'
 import { canonicalFactors, factorOption, factorsFromOption } from './factors'
-import { browserStorage, readPreferences, STORAGE_WARNING, preferenceWriter } from './storage'
+import { browserStorage, readPreferences, STORAGE_WARNING, preferenceWriter, preferencePayload } from './storage'
 import { durableWrite, recoverWrites } from './writeJournal'
 
 const SETTINGS_KEY = 'times-tables.settings'
@@ -57,5 +57,5 @@ export function recoverSettings() {
 
 // Pass only intentional changes, not a stale UI snapshot.
 export function saveSettings(change: Partial<Settings>): Promise<string | null> {
-  return durableWrite(SETTINGS_KEY, { change, defaults: {} }, preferenceWriter(SETTINGS_KEY, validSettings), browserStorage)
+  return durableWrite(SETTINGS_KEY, preferencePayload(change), preferenceWriter(SETTINGS_KEY, validSettings), browserStorage)
 }

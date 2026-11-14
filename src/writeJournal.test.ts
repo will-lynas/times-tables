@@ -71,6 +71,14 @@ for (const malformed of ['{broken', '{"version":99,"payload":{}}', '{"version":1
   expect([...values]).toEqual(before)
 })
 
+test('malformed journal identities are not normalized or replayed', async () => {
+  const { storage, values } = memory()
+  storage.setItem(key + '.intent.not-a-valid-identity', JSON.stringify({ version: 1, payload: payload('ordered') }))
+  const before = [...values]
+  expect(await recoverWrites(key, apply, () => storage)).toBeTruthy()
+  expect([...values]).toEqual(before)
+})
+
 test('future receipts refuse replay without changing intent or primary bytes', async () => {
   const { storage, values } = memory()
   const id = '0000000000000001-00000000-0000-4000-8000-000000000000'
