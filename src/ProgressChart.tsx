@@ -59,7 +59,6 @@ export default function ProgressChart({ scores, initialSelection }: { scores: re
           <path d={series.flag === 'showRecord' ? 'M1,3 H12 V9 H23' : 'M1,6 H23'} fill="none" stroke={series.stroke} strokeOpacity={series.opacity} strokeWidth={series.width} />
         </svg>
         <span>{series.label}</span>
-        <span className="progress-legend-state" aria-hidden="true">{series.shown ? '✓' : '−'}</span>
       </button>)}
     </div>
     {selection.warning && <p className="storage-warning" role="alert">{selection.warning}</p>}
